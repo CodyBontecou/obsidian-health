@@ -59,6 +59,7 @@ extension Color {
 // MARK: - Gradients
 
 struct AppGradients {
+    @available(iOS 18.0, *)
     static let backgroundMesh = MeshGradient(
         width: 3,
         height: 3,
@@ -72,6 +73,13 @@ struct AppGradients {
             .bgSecondary, Color(hex: "1E1B4B"), .bgSecondary,
             .bgPrimary, .bgSecondary, .bgPrimary
         ]
+    )
+
+    // Fallback gradient for iOS 17
+    static let backgroundFallback = LinearGradient(
+        colors: [.bgPrimary, Color(hex: "1E1B4B"), .bgSecondary],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
     )
 
     static let healthGradient = LinearGradient(

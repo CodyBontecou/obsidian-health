@@ -13,7 +13,11 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             // Animated background
-            AnimatedMeshBackground()
+            if #available(iOS 18.0, *) {
+                AnimatedMeshBackground()
+            } else {
+                AnimatedBackgroundFallback()
+            }
 
             // Main content
             ScrollView(.vertical, showsIndicators: false) {

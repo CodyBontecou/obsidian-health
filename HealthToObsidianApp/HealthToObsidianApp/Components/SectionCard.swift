@@ -34,7 +34,7 @@ struct HealthConnectionCard: View {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Apple Health")
                         .font(Typography.headline())
-                        .foregroundStyle(.textPrimary)
+                        .foregroundStyle(Color.textPrimary)
 
                     StatusPill(status: isAuthorized ? .connected : .disconnected)
                 }
@@ -72,23 +72,23 @@ struct VaultSelectionCard: View {
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("Obsidian Vault")
                             .font(Typography.headline())
-                            .foregroundStyle(.textPrimary)
+                            .foregroundStyle(Color.textPrimary)
 
                         if isSelected {
                             HStack(spacing: Spacing.xs) {
                                 Image(systemName: "folder.fill")
                                     .font(.system(size: 12))
-                                    .foregroundStyle(.obsidianPurple)
+                                    .foregroundStyle(Color.obsidianPurple)
 
                                 Text(vaultName)
                                     .font(Typography.caption())
-                                    .foregroundStyle(.textSecondary)
+                                    .foregroundStyle(Color.textSecondary)
                                     .lineLimit(1)
                             }
                         } else {
                             Text("No vault selected")
                                 .font(Typography.caption())
-                                .foregroundStyle(.textMuted)
+                                .foregroundStyle(Color.textMuted)
                         }
                     }
 
@@ -127,28 +127,28 @@ struct ExportSettingsCard: View {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "gearshape.fill")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.textSecondary)
+                        .foregroundStyle(Color.textSecondary)
 
                     Text("Export Settings")
                         .font(Typography.headline())
-                        .foregroundStyle(.textPrimary)
+                        .foregroundStyle(Color.textPrimary)
                 }
 
                 // Subfolder input
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("SUBFOLDER")
                         .font(Typography.label())
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                         .tracking(1)
 
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "folder")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.textMuted)
+                            .foregroundStyle(Color.textMuted)
 
                         TextField("Health", text: $subfolder)
                             .font(Typography.bodyMono())
-                            .foregroundStyle(.textPrimary)
+                            .foregroundStyle(Color.textPrimary)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .onChange(of: subfolder) { _, _ in
@@ -171,7 +171,7 @@ struct ExportSettingsCard: View {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("DATE")
                         .font(Typography.label())
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                         .tracking(1)
 
                     DatePicker(
@@ -199,11 +199,11 @@ struct ExportSettingsCard: View {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "arrow.right.circle")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.obsidianViolet)
+                        .foregroundStyle(Color.obsidianViolet)
 
                     Text(exportPath)
                         .font(Typography.caption())
-                        .foregroundStyle(.textMuted)
+                        .foregroundStyle(Color.textMuted)
                         .lineLimit(1)
                 }
                 .padding(.horizontal, Spacing.md)

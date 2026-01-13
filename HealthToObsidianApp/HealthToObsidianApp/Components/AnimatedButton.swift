@@ -200,7 +200,7 @@ struct DestructiveButton: View {
         Button(action: action) {
             Text(title)
                 .font(Typography.caption())
-                .foregroundStyle(.errorGlow)
+                .foregroundStyle(Color.errorGlow)
                 .padding(.horizontal, Spacing.md)
                 .padding(.vertical, Spacing.sm)
                 .background(

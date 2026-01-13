@@ -1,7 +1,9 @@
 import SwiftUI
+import Combine
 
 // MARK: - Animated Mesh Background
 
+@available(iOS 18.0, *)
 struct AnimatedMeshBackground: View {
     @State private var phase: CGFloat = 0
     @State private var t: Float = 0.0
@@ -135,7 +137,7 @@ struct AnimatedHeader: View {
 
                 Image(systemName: "arrow.right")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.textMuted)
+                    .foregroundStyle(Color.textMuted)
 
                 Image(systemName: "doc.richtext.fill")
                     .font(.system(size: 28, weight: .medium))
@@ -146,13 +148,13 @@ struct AnimatedHeader: View {
 
             Text("Health to Obsidian")
                 .font(Typography.displayLarge())
-                .foregroundStyle(.textPrimary)
+                .foregroundStyle(Color.textPrimary)
                 .opacity(isVisible ? 1 : 0)
                 .offset(y: isVisible ? 0 : 10)
 
             Text("Export your wellness journey")
                 .font(Typography.body())
-                .foregroundStyle(.textSecondary)
+                .foregroundStyle(Color.textSecondary)
                 .opacity(isVisible ? 1 : 0)
                 .offset(y: isVisible ? 0 : 10)
         }
@@ -163,6 +165,67 @@ struct AnimatedHeader: View {
         .onAppear {
             withAnimation(AnimationTimings.easeOutExpo.delay(0.1)) {
                 isVisible = true
+            }
+        }
+    }
+}
+
+// MARK: - Fallback Background for iOS 17
+
+struct AnimatedBackgroundFallback: View {
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Base gradient
+                LinearGradient(
+                    colors: [.bgPrimary, Color(hex: "1E1B4B"), .bgSecondary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                // Floating orbs
+                FloatingOrb(
+                    color: .healthCoral,
+                    size: 200,
+                    position: CGPoint(
+                        x: geometry.size.width * 0.8,
+                        y: geometry.size.height * 0.15
+                    ),
+                    phase: phase
+                )
+                .blur(radius: 60)
+                .opacity(0.3)
+
+                FloatingOrb(
+                    color: .obsidianPurple,
+                    size: 300,
+                    position: CGPoint(
+                        x: geometry.size.width * 0.2,
+                        y: geometry.size.height * 0.7
+                    ),
+                    phase: phase + .pi
+                )
+                .blur(radius: 80)
+                .opacity(0.25)
+
+                // Subtle noise overlay
+                Rectangle()
+                    .fill(
+                        ImagePaint(
+                            image: Image(systemName: "circle.fill"),
+                            scale: 0.005
+                        )
+                    )
+                    .opacity(0.02)
+                    .blendMode(.overlay)
+            }
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
+                phase = .pi * 2
             }
         }
     }

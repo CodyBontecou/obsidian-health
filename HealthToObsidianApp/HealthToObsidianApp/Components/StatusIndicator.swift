@@ -167,11 +167,11 @@ struct ExportStatusBadge: View {
                 switch status {
                 case .success:
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.successGlow)
+                        .foregroundStyle(Color.successGlow)
                         .symbolEffect(.bounce, value: isVisible)
                 case .error:
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.errorGlow)
+                        .foregroundStyle(Color.errorGlow)
                         .symbolEffect(.bounce, value: isVisible)
                 }
             }
