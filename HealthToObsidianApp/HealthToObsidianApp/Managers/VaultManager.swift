@@ -61,7 +61,6 @@ final class VaultManager: ObservableObject {
             relativeTo: nil
         )
         UserDefaults.standard.set(bookmarkData, forKey: bookmarkKey)
-        print("VaultManager: Saved security-scoped bookmark for \(url.lastPathComponent)")
     }
 
     func saveSubfolderSetting() {
@@ -107,19 +106,9 @@ final class VaultManager: ObservableObject {
     }
 
     /// Start accessing the vault (for background tasks)
-    /// Returns true if access was successfully granted
-    func startVaultAccess() -> Bool {
-        guard let url = vaultURL else {
-            print("VaultManager: No vault URL available")
-            return false
-        }
-        let success = url.startAccessingSecurityScopedResource()
-        if success {
-            print("VaultManager: Successfully started security-scoped resource access")
-        } else {
-            print("VaultManager: Failed to start security-scoped resource access")
-        }
-        return success
+    func startVaultAccess() {
+        guard let url = vaultURL else { return }
+        _ = url.startAccessingSecurityScopedResource()
     }
 
     /// Stop accessing the vault (for background tasks)

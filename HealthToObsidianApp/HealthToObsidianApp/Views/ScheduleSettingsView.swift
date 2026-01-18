@@ -50,35 +50,71 @@ struct ScheduleSettingsView: View {
                         }
                         .tint(Color.accent)
 
-                        HStack {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
                             Text("Time")
                                 .foregroundStyle(Color.textPrimary)
 
-                            Spacer()
-
-                            HStack(spacing: 4) {
-                                // Hour Picker
-                                Picker("", selection: $preferredHour) {
+                            HStack(spacing: Spacing.xs) {
+                                // Hour
+                                Menu {
                                     ForEach(0..<24, id: \.self) { hour in
-                                        Text(String(format: "%02d", hour)).tag(hour)
+                                        Button(String(format: "%02d", hour)) {
+                                            preferredHour = hour
+                                        }
                                     }
+                                } label: {
+                                    HStack {
+                                        Text(String(format: "%02d", preferredHour))
+                                            .font(Typography.bodyMono())
+                                            .foregroundStyle(Color.textPrimary)
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(Color.textMuted)
+                                    }
+                                    .padding(.horizontal, Spacing.sm)
+                                    .padding(.vertical, Spacing.xs)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .fill(Color.bgSecondary)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .strokeBorder(Color.borderDefault, lineWidth: 1)
+                                    )
                                 }
-                                .pickerStyle(.menu)
-                                .tint(Color.accent)
-                                .accessibilityLabel("Hour")
 
                                 Text(":")
                                     .foregroundStyle(Color.textSecondary)
 
-                                // Minute Picker
-                                Picker("", selection: $preferredMinute) {
+                                // Minute
+                                Menu {
                                     ForEach(Array(stride(from: 0, to: 60, by: 5)), id: \.self) { minute in
-                                        Text(String(format: "%02d", minute)).tag(minute)
+                                        Button(String(format: "%02d", minute)) {
+                                            preferredMinute = minute
+                                        }
                                     }
+                                } label: {
+                                    HStack {
+                                        Text(String(format: "%02d", preferredMinute))
+                                            .font(Typography.bodyMono())
+                                            .foregroundStyle(Color.textPrimary)
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(Color.textMuted)
+                                    }
+                                    .padding(.horizontal, Spacing.sm)
+                                    .padding(.vertical, Spacing.xs)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .fill(Color.bgSecondary)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .strokeBorder(Color.borderDefault, lineWidth: 1)
+                                    )
                                 }
-                                .pickerStyle(.menu)
-                                .tint(Color.accent)
-                                .accessibilityLabel("Minute")
+
+                                Spacer()
                             }
                         }
                     } header: {
