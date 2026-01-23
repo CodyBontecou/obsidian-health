@@ -320,7 +320,7 @@ class SchedulingManager: ObservableObject {
         task.expirationHandler = {
             self.logger.warning("Background task expired")
             Task {
-                await self.sendExportNotification(success: false, daysExported: 0)
+                await self.sendExportNotification(success: false, daysExported: 0, failureReason: .backgroundTaskExpired)
                 // Record task expiration in history
                 ExportHistoryManager.shared.recordFailure(
                     source: .scheduled,
@@ -367,7 +367,7 @@ class SchedulingManager: ObservableObject {
             }
         } else {
             logger.error("Background export failed")
-            await sendExportNotification(success: false, daysExported: daysToExport)
+            await sendExportNotification(success: false, daysExported: daysToExport, failureReason: result.failureReason)
 
             // Record failure in history
             ExportHistoryManager.shared.recordFailure(
@@ -487,7 +487,7 @@ class SchedulingManager: ObservableObject {
     // MARK: - Notifications
 
     /// Sends a notification after a scheduled export completes
-    private func sendExportNotification(success: Bool, daysExported: Int) async {
+    private func sendExportNotification(success: Bool, daysExported: Int, failureReason: ExportFailureReason? = nil) async {
         let content = UNMutableNotificationContent()
 
         if success {
@@ -498,7 +498,11 @@ class SchedulingManager: ObservableObject {
             content.sound = .default
         } else {
             content.title = "Export Failed"
-            content.body = "Failed to export health data. Please check your settings."
+            if let reason = failureReason {
+                content.body = reason.detailedDescription
+            } else {
+                content.body = "Failed to export health data. Please check your settings."
+            }
             content.sound = .default
         }
 

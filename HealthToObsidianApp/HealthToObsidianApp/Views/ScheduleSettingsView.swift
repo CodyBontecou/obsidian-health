@@ -2,7 +2,10 @@ import SwiftUI
 
 struct ScheduleSettingsView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
+    @EnvironmentObject var healthKitManager: HealthKitManager
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
+    @StateObject private var vaultManager = VaultManager()
+    @StateObject private var advancedSettings = AdvancedExportSettings()
     @Environment(\.dismiss) private var dismiss
 
     @State private var isEnabled: Bool
@@ -10,6 +13,13 @@ struct ScheduleSettingsView: View {
     @State private var preferredHour: Int
     @State private var preferredMinute: Int
     @State private var selectedEntry: ExportHistoryEntry?
+
+    // Retry export state
+    @State private var isRetrying = false
+    @State private var retryProgress: Double = 0.0
+    @State private var retryStatusMessage = ""
+    @State private var showRetryError = false
+    @State private var retryErrorMessage = ""
 
     init() {
         let schedule = ExportSchedule.load()
@@ -190,7 +200,20 @@ struct ScheduleSettingsView: View {
                 }
             }
             .sheet(item: $selectedEntry) { entry in
-                ExportHistoryDetailView(entry: entry)
+                ExportHistoryDetailView(entry: entry, onRetry: retryExport)
+            }
+            .overlay {
+                if isRetrying {
+                    RetryProgressOverlay(
+                        message: retryStatusMessage,
+                        progress: retryProgress
+                    )
+                }
+            }
+            .alert("Retry Failed", isPresented: $showRetryError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(retryErrorMessage)
             }
         }
     }
@@ -227,6 +250,178 @@ struct ScheduleSettingsView: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+
+    // MARK: - Retry Export
+
+    private func retryExport(_ entry: ExportHistoryEntry) {
+        isRetrying = true
+        retryProgress = 0.0
+        retryStatusMessage = "Preparing..."
+
+        Task {
+            await performRetryExport(entry)
+        }
+    }
+
+    private func performRetryExport(_ entry: ExportHistoryEntry) async {
+        defer {
+            Task { @MainActor in
+                isRetrying = false
+                retryProgress = 0.0
+                retryStatusMessage = ""
+            }
+        }
+
+        // Determine which dates to retry
+        let datesToExport: [Date]
+        if !entry.failedDateDetails.isEmpty {
+            // Retry only the failed dates
+            datesToExport = entry.failedDateDetails.map { $0.date }
+        } else {
+            // Retry all dates in the range
+            var dates: [Date] = []
+            var currentDate = Calendar.current.startOfDay(for: entry.dateRangeStart)
+            let endDate = Calendar.current.startOfDay(for: entry.dateRangeEnd)
+
+            while currentDate <= endDate {
+                dates.append(currentDate)
+                guard let nextDate = Calendar.current.date(byAdding: .day, value: 1, to: currentDate) else {
+                    break
+                }
+                currentDate = nextDate
+            }
+            datesToExport = dates
+        }
+
+        guard !datesToExport.isEmpty else {
+            await MainActor.run {
+                retryErrorMessage = "No dates to retry"
+                showRetryError = true
+            }
+            return
+        }
+
+        guard vaultManager.hasVaultAccess else {
+            await MainActor.run {
+                retryErrorMessage = ExportFailureReason.noVaultSelected.detailedDescription
+                showRetryError = true
+            }
+            return
+        }
+
+        vaultManager.refreshVaultAccess()
+        vaultManager.startVaultAccess()
+
+        let totalDays = datesToExport.count
+        var successCount = 0
+        var failedDateDetails: [FailedDateDetail] = []
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        for (index, date) in datesToExport.enumerated() {
+            await MainActor.run {
+                retryStatusMessage = "Exporting \(dateFormatter.string(from: date))... (\(index + 1)/\(totalDays))"
+                retryProgress = Double(index) / Double(totalDays)
+            }
+
+            do {
+                let healthData = try await healthKitManager.fetchHealthData(for: date)
+
+                if !healthData.hasAnyData {
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                    continue
+                }
+
+                let success = vaultManager.exportHealthData(healthData, for: date, settings: advancedSettings)
+
+                if success {
+                    successCount += 1
+                } else {
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
+                }
+            } catch {
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
+            }
+        }
+
+        vaultManager.stopVaultAccess()
+
+        await MainActor.run {
+            retryProgress = 1.0
+
+            // Record the result
+            let startDate = datesToExport.min() ?? entry.dateRangeStart
+            let endDate = datesToExport.max() ?? entry.dateRangeEnd
+
+            if failedDateDetails.isEmpty && successCount > 0 {
+                retryStatusMessage = "Successfully exported \(successCount) file\(successCount == 1 ? "" : "s")"
+                exportHistory.recordSuccess(
+                    source: .manual,
+                    dateRangeStart: startDate,
+                    dateRangeEnd: endDate,
+                    successCount: successCount,
+                    totalCount: totalDays
+                )
+            } else if successCount > 0 {
+                retryStatusMessage = "Exported \(successCount)/\(totalDays) files"
+                exportHistory.recordSuccess(
+                    source: .manual,
+                    dateRangeStart: startDate,
+                    dateRangeEnd: endDate,
+                    successCount: successCount,
+                    totalCount: totalDays,
+                    failedDateDetails: failedDateDetails
+                )
+            } else {
+                let primaryReason = failedDateDetails.first?.reason ?? .unknown
+                retryErrorMessage = primaryReason.detailedDescription
+                showRetryError = true
+
+                exportHistory.recordFailure(
+                    source: .manual,
+                    dateRangeStart: startDate,
+                    dateRangeEnd: endDate,
+                    reason: primaryReason,
+                    successCount: 0,
+                    totalCount: totalDays,
+                    failedDateDetails: failedDateDetails
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Retry Progress Overlay
+
+struct RetryProgressOverlay: View {
+    let message: String
+    let progress: Double
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+
+            VStack(spacing: Spacing.md) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(Color.accent)
+
+                Text(message)
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textPrimary)
+
+                ProgressView(value: progress)
+                    .tint(Color.accent)
+                    .frame(width: 200)
+            }
+            .padding(Spacing.xl)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.bgSecondary)
+            )
+        }
     }
 }
 
@@ -299,7 +494,17 @@ struct ExportHistoryRow: View {
 
 struct ExportHistoryDetailView: View {
     let entry: ExportHistoryEntry
+    let onRetry: ((ExportHistoryEntry) -> Void)?
     @Environment(\.dismiss) private var dismiss
+
+    init(entry: ExportHistoryEntry, onRetry: ((ExportHistoryEntry) -> Void)? = nil) {
+        self.entry = entry
+        self.onRetry = onRetry
+    }
+
+    private var canRetry: Bool {
+        !entry.isFullSuccess
+    }
 
     private var statusColor: Color {
         if entry.isFullSuccess {
@@ -413,6 +618,30 @@ struct ExportHistoryDetailView: View {
                             .foregroundStyle(Color.textSecondary)
                     }
                 }
+
+                // Retry Section (for failed or partial exports)
+                if canRetry, let onRetry = onRetry {
+                    Section {
+                        Button(action: {
+                            dismiss()
+                            onRetry(entry)
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Retry Export")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .foregroundStyle(Color.accent)
+                        }
+                    } footer: {
+                        Text(entry.failedDateDetails.isEmpty
+                            ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"
+                            : "Re-export \(entry.failedDateDetails.count) failed date\(entry.failedDateDetails.count == 1 ? "" : "s")"
+                        )
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textSecondary)
+                    }
+                }
             }
             .scrollContentBackground(.hidden)
             .background(Color.bgPrimary)
@@ -451,4 +680,5 @@ struct ExportHistoryDetailView: View {
 #Preview {
     ScheduleSettingsView()
         .environmentObject(SchedulingManager.shared)
+        .environmentObject(HealthKitManager.shared)
 }

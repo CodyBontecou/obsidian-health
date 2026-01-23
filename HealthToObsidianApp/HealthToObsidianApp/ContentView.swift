@@ -203,6 +203,7 @@ struct ContentView: View {
         .sheet(isPresented: $showScheduleSettings) {
             ScheduleSettingsView()
                 .environmentObject(schedulingManager)
+                .environmentObject(healthKitManager)
         }
         .sheet(isPresented: $showAdvancedSettings) {
             AdvancedSettingsView(settings: advancedSettings)
