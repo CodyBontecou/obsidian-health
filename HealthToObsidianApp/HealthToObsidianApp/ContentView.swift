@@ -327,7 +327,7 @@ struct ContentView: View {
                     }
                     failedDateDetails.append(FailedDateDetail(date: date, reason: reason))
                 } catch {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .unknown))
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: .unknown, errorDetails: error.localizedDescription))
                 }
 
                 exportProgress = Double(index + 1) / Double(totalDays)
@@ -381,7 +381,12 @@ struct ContentView: View {
                     failedDateDetails: failedDateDetails
                 )
 
-                errorMessage = primaryReason.detailedDescription
+                // Use the detailed message from the first failed date if available
+                if let firstFailedDetail = failedDateDetails.first {
+                    errorMessage = firstFailedDetail.detailedMessage
+                } else {
+                    errorMessage = primaryReason.detailedDescription
+                }
                 showError = true
             }
         }

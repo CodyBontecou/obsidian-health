@@ -133,11 +133,26 @@ enum ExportFailureReason: String, Codable {
 struct FailedDateDetail: Codable {
     let date: Date
     let reason: ExportFailureReason
+    let errorDetails: String?
+
+    init(date: Date, reason: ExportFailureReason, errorDetails: String? = nil) {
+        self.date = date
+        self.reason = reason
+        self.errorDetails = errorDetails
+    }
 
     var dateString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+
+    /// Returns the detailed error message, including raw error details if available
+    var detailedMessage: String {
+        if let details = errorDetails, !details.isEmpty {
+            return "\(reason.detailedDescription)\n\nDetails: \(details)"
+        }
+        return reason.detailedDescription
     }
 }
 

@@ -293,7 +293,7 @@ class SchedulingManager: ObservableObject {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
                 }
             } catch {
-                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError, errorDetails: error.localizedDescription))
             }
         }
 
@@ -377,7 +377,7 @@ class SchedulingManager: ObservableObject {
             }
         } else {
             logger.error("Background export failed")
-            await sendExportNotification(success: false, daysExported: daysToExport, failureReason: result.failureReason)
+            await sendExportNotification(success: false, daysExported: daysToExport, failureReason: result.failureReason, errorDetails: result.failedDateDetails.first?.errorDetails)
 
             // Record failure in history
             ExportHistoryManager.shared.recordFailure(
@@ -488,7 +488,7 @@ class SchedulingManager: ObservableObject {
                 }
             } catch {
                 logger.error("Error fetching health data for \(date): \(error.localizedDescription)")
-                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError, errorDetails: error.localizedDescription))
             }
         }
 
@@ -510,7 +510,7 @@ class SchedulingManager: ObservableObject {
     // MARK: - Notifications
 
     /// Sends a notification after a scheduled export completes
-    private func sendExportNotification(success: Bool, daysExported: Int, failureReason: ExportFailureReason? = nil) async {
+    private func sendExportNotification(success: Bool, daysExported: Int, failureReason: ExportFailureReason? = nil, errorDetails: String? = nil) async {
         let content = UNMutableNotificationContent()
 
         if success {
@@ -521,11 +521,18 @@ class SchedulingManager: ObservableObject {
             content.sound = .default
         } else {
             content.title = "Export Failed"
+            var body: String
             if let reason = failureReason {
-                content.body = reason.detailedDescription
+                body = reason.shortDescription
+                if let details = errorDetails, !details.isEmpty {
+                    body += ": \(details)"
+                }
+            } else if let details = errorDetails, !details.isEmpty {
+                body = details
             } else {
-                content.body = "Failed to export health data. Please check your settings."
+                body = "Failed to export health data. Please check your settings."
             }
+            content.body = body
             content.sound = .default
         }
 

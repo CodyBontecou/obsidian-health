@@ -111,33 +111,17 @@ final class HealthKitManager: ObservableObject {
     }
 
     /// Checks if HealthKit data can be accessed in the current context (background or foreground)
-    /// Returns true if authorized and data is accessible, throws appropriate error otherwise
+    /// Note: For read-only apps, we cannot check authorization status because Apple hides it for privacy.
+    /// authorizationStatus(for:) only reports WRITE permission status, not READ permission status.
+    /// We simply verify HealthKit is available and let the queries run - if access is denied,
+    /// the queries will return empty results (which is indistinguishable from no data).
     private func checkAuthorizationForBackgroundAccess() throws {
         guard isHealthDataAvailable else {
             throw HealthKitError.dataNotAvailable
         }
-
-        // Check authorization status for a sample type (steps) as a proxy for overall access
-        guard let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) else {
-            throw HealthKitError.dataNotAvailable
-        }
-
-        let authStatus = healthStore.authorizationStatus(for: stepsType)
-
-        switch authStatus {
-        case .notDetermined:
-            throw HealthKitError.notAuthorized
-        case .sharingDenied:
-            // User explicitly denied - this is a permissions issue
-            throw HealthKitError.notAuthorized
-        case .sharingAuthorized:
-            // Authorized - but data might still be protected if device is locked
-            // We can't directly check lock state, so we'll let the query attempt proceed
-            // and catch the error if it fails
-            break
-        @unknown default:
-            throw HealthKitError.notAuthorized
-        }
+        // For read-only access, we cannot determine if the user granted permission.
+        // Apple intentionally hides this for privacy - denied access looks like empty data.
+        // Just proceed with queries; they will return empty results if access is denied.
     }
 
     // MARK: - Background Delivery
