@@ -53,11 +53,11 @@ struct PrimaryButton: View {
                     // Base color
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(isPressed ? Color.accentHover : Color.accent)
-                    // Glass overlay
+                    // Subtle glass highlight
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [Color.white.opacity(0.2), Color.clear],
+                                colors: [Color.white.opacity(0.1), Color.clear],
                                 startPoint: .top,
                                 endPoint: .center
                             )
@@ -67,9 +67,9 @@ struct PrimaryButton: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.25), lineWidth: 1)
+                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
             )
-            .shadow(color: Color.accent.opacity(isDisabled ? 0 : 0.4), radius: 12, x: 0, y: 6)
+            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
             .opacity(isDisabled ? 0.5 : 1)
             .scaleEffect(isPressed ? 0.98 : 1.0)
         }
