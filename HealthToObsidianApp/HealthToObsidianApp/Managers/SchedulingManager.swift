@@ -192,23 +192,26 @@ class SchedulingManager: ObservableObject {
         }
 
         // Check what dates are missing
-        let lastExportDay: Date
+        // lastExportDate is when the export RAN, but exports are for the previous day's data
+        // So if we exported on Monday, we have data for Sunday (Monday - 1)
+        let lastExportedDataDay: Date
         if let lastExport = schedule.lastExportDate {
-            lastExportDay = calendar.startOfDay(for: lastExport)
+            let exportRunDay = calendar.startOfDay(for: lastExport)
+            lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: exportRunDay)!
         } else {
             // Never exported, start from oldest date
-            lastExportDay = calendar.date(byAdding: .day, value: -1, to: oldestDateToExport)!
+            lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: oldestDateToExport)!
         }
 
-        // If we've already exported up to yesterday, nothing to do
-        if lastExportDay >= yesterday {
+        // If we've already exported data for yesterday, nothing to do
+        if lastExportedDataDay >= yesterday {
             logger.info("Catch-up check: No missed exports")
             return
         }
 
-        // Calculate missed dates (from day after last export to yesterday)
+        // Calculate missed dates (from day after last exported data to yesterday)
         var missedDates: [Date] = []
-        var checkDate = calendar.date(byAdding: .day, value: 1, to: lastExportDay)!
+        var checkDate = calendar.date(byAdding: .day, value: 1, to: lastExportedDataDay)!
 
         while checkDate <= yesterday && checkDate >= oldestDateToExport {
             missedDates.append(checkDate)
@@ -562,8 +565,8 @@ class SchedulingManager: ObservableObject {
     /// Sends a "tap to export" reminder notification when export fails due to device lock
     private func sendExportReminderNotification() async {
         let content = UNMutableNotificationContent()
-        content.title = "Export Ready"
-        content.body = "Tap to export your health data"
+        content.title = "Device Was Locked"
+        content.body = "Tap to retry your health export"
         content.sound = .default
 
         // Use a specific identifier pattern that AppDelegate looks for
