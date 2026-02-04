@@ -16,16 +16,50 @@ struct AdvancedSettingsView: View {
             Form {
                 // Data Types Section
                 Section {
+                    HStack {
+                        Text("\(settings.dataTypes.enabledCount) of 10 categories enabled")
+                            .font(Typography.caption())
+                            .foregroundColor(Color.textSecondary)
+                        Spacer()
+                        Button("All") {
+                            settings.dataTypes.selectAll()
+                        }
+                        .font(Typography.caption())
+                        .foregroundColor(Color.accent)
+                        Text("/")
+                            .foregroundColor(Color.textMuted)
+                        Button("None") {
+                            settings.dataTypes.deselectAll()
+                        }
+                        .font(Typography.caption())
+                        .foregroundColor(Color.accent)
+                    }
+
                     Toggle("Sleep", isOn: $settings.dataTypes.sleep)
                         .tint(Color.accent)
 
                     Toggle("Activity", isOn: $settings.dataTypes.activity)
                         .tint(Color.accent)
 
+                    Toggle("Heart", isOn: $settings.dataTypes.heart)
+                        .tint(Color.accent)
+
                     Toggle("Vitals", isOn: $settings.dataTypes.vitals)
                         .tint(Color.accent)
 
-                    Toggle("Body Measurements", isOn: $settings.dataTypes.body)
+                    Toggle("Body", isOn: $settings.dataTypes.body)
+                        .tint(Color.accent)
+
+                    Toggle("Nutrition", isOn: $settings.dataTypes.nutrition)
+                        .tint(Color.accent)
+
+                    Toggle("Mindfulness", isOn: $settings.dataTypes.mindfulness)
+                        .tint(Color.accent)
+
+                    Toggle("Mobility", isOn: $settings.dataTypes.mobility)
+                        .tint(Color.accent)
+
+                    Toggle("Hearing", isOn: $settings.dataTypes.hearing)
                         .tint(Color.accent)
 
                     Toggle("Workouts", isOn: $settings.dataTypes.workouts)
@@ -40,7 +74,7 @@ struct AdvancedSettingsView: View {
                             .font(Typography.caption())
                             .foregroundColor(.red)
                     } else {
-                        Text("Select which health data categories to include in exports")
+                        Text("Select which health data categories to include in exports. Only available data will be exported.")
                             .font(Typography.caption())
                             .foregroundColor(Color.textMuted)
                     }
@@ -199,8 +233,13 @@ struct AdvancedSettingsView: View {
         var categories: [String] = []
         if settings.dataTypes.sleep { categories.append("Sleep") }
         if settings.dataTypes.activity { categories.append("Activity") }
+        if settings.dataTypes.heart { categories.append("Heart") }
         if settings.dataTypes.vitals { categories.append("Vitals") }
         if settings.dataTypes.body { categories.append("Body") }
+        if settings.dataTypes.nutrition { categories.append("Nutrition") }
+        if settings.dataTypes.mindfulness { categories.append("Mindfulness") }
+        if settings.dataTypes.mobility { categories.append("Mobility") }
+        if settings.dataTypes.hearing { categories.append("Hearing") }
         if settings.dataTypes.workouts { categories.append("Workouts") }
         return categories
     }

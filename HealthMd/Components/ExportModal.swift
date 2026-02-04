@@ -10,6 +10,7 @@ struct ExportModal: View {
     @ObservedObject var exportSettings: AdvancedExportSettings
     @Environment(\.dismiss) private var dismiss
     @State private var showFilenameEditor = false
+    @State private var showFolderStructureEditor = false
 
     var body: some View {
         NavigationStack {
@@ -50,6 +51,49 @@ struct ExportModal: View {
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                             )
+                        }
+
+                        // Folder organization with Liquid Glass styling
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("FOLDER ORGANIZATION")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            Button {
+                                showFolderStructureEditor = true
+                            } label: {
+                                HStack(spacing: Spacing.sm) {
+                                    Image(systemName: "folder.badge.gearshape")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(Color.accent)
+
+                                    Text(folderStructureDisplayText)
+                                        .font(Typography.bodyMono())
+                                        .foregroundStyle(Color.textPrimary)
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Color.textMuted)
+                                }
+                                .padding(.horizontal, Spacing.md)
+                                .padding(.vertical, Spacing.md)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(.ultraThinMaterial)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                                )
+                            }
+                            .buttonStyle(.plain)
+
+                            Text("Organize exports into subfolders by date")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.textMuted)
                         }
 
                         // Date range pickers with Liquid Glass styling
@@ -196,21 +240,41 @@ struct ExportModal: View {
         .sheet(isPresented: $showFilenameEditor) {
             FilenameFormatEditor(filenameFormat: $exportSettings.filenameFormat)
         }
+        .sheet(isPresented: $showFolderStructureEditor) {
+            FolderStructureEditor(folderStructure: $exportSettings.folderStructure)
+        }
+    }
+
+    private var folderStructureDisplayText: String {
+        if exportSettings.folderStructure.isEmpty {
+            return "Flat (no subfolders)"
+        } else {
+            return exportSettings.folderStructure
+        }
     }
 
     private var exportPath: String {
-        let subfolder = subfolder.isEmpty ? "" : subfolder + "/"
+        let subfolderPath = subfolder.isEmpty ? "" : subfolder + "/"
         let fileExtension = exportSettings.exportFormat.fileExtension
 
         let dayCount = Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0
 
         if dayCount == 0 {
+            let folderPath = exportSettings.formatFolderPath(for: startDate).map { $0 + "/" } ?? ""
             let filename = exportSettings.formatFilename(for: startDate)
-            return "\(vaultName)/\(subfolder)\(filename).\(fileExtension)"
+            return "\(vaultName)/\(subfolderPath)\(folderPath)\(filename).\(fileExtension)"
         } else {
+            // For date ranges, show a simplified preview
+            let startFolderPath = exportSettings.formatFolderPath(for: startDate).map { $0 + "/" } ?? ""
             let startFilename = exportSettings.formatFilename(for: startDate)
             let endFilename = exportSettings.formatFilename(for: endDate)
-            return "\(vaultName)/\(subfolder)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(dayCount + 1) files)"
+
+            // If folder structure includes date placeholders, indicate multiple folders
+            if !exportSettings.folderStructure.isEmpty {
+                return "\(vaultName)/\(subfolderPath).../{files} (\(dayCount + 1) files in date folders)"
+            } else {
+                return "\(vaultName)/\(subfolderPath)\(startFilename).\(fileExtension) to \(endFilename).\(fileExtension) (\(dayCount + 1) files)"
+            }
         }
     }
 }
@@ -416,5 +480,260 @@ struct FilenameFormatEditor: View {
         result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
 
         return result + ".md"
+    }
+}
+
+// MARK: - Folder Structure Editor
+
+struct FolderStructureEditor: View {
+    @Binding var folderStructure: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var tempStructure: String = ""
+
+    private let presets: [(name: String, value: String, description: String)] = [
+        ("Flat", "", "All files in one folder"),
+        ("By Year", "{year}", "Health/2025/..."),
+        ("By Year & Month", "{year}/{month}", "Health/2025/02/..."),
+        ("By Year & Month Name", "{year}/{monthName}", "Health/2025/February/...")
+    ]
+
+    private let placeholders: [(name: String, placeholder: String, description: String)] = [
+        ("Year", "{year}", "2025"),
+        ("Month", "{month}", "02"),
+        ("Month Name", "{monthName}", "February"),
+        ("Day", "{day}", "04"),
+        ("Weekday", "{weekday}", "Tuesday")
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bgPrimary.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.lg) {
+                        // Quick presets
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("PRESETS")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            VStack(spacing: Spacing.xs) {
+                                ForEach(presets, id: \.value) { preset in
+                                    Button {
+                                        tempStructure = preset.value
+                                    } label: {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(preset.name)
+                                                    .font(.system(size: 15, weight: .medium))
+                                                    .foregroundStyle(Color.textPrimary)
+
+                                                Text(preset.description)
+                                                    .font(.system(size: 12, weight: .regular))
+                                                    .foregroundStyle(Color.textMuted)
+                                            }
+
+                                            Spacer()
+
+                                            if tempStructure == preset.value {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .font(.system(size: 18, weight: .medium))
+                                                    .foregroundStyle(Color.accent)
+                                            }
+                                        }
+                                        .padding(.horizontal, Spacing.md)
+                                        .padding(.vertical, Spacing.sm)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .fill(tempStructure == preset.value ? Color.accent.opacity(0.15) : Color.white.opacity(0.05))
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .strokeBorder(tempStructure == preset.value ? Color.accent.opacity(0.5) : Color.clear, lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(Spacing.sm)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+                        }
+
+                        // Custom format input
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("CUSTOM FORMAT")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "folder.badge.gearshape")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(Color.accent)
+
+                                TextField("e.g. {year}/{month}", text: $tempStructure)
+                                    .font(Typography.bodyMono())
+                                    .foregroundStyle(Color.textPrimary)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                            }
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.md)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+
+                            Text("Leave empty for flat structure, or use placeholders below")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.textMuted)
+                        }
+
+                        // Preview
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("PREVIEW")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            Text(previewPath)
+                                .font(Typography.bodyMono())
+                                .foregroundStyle(Color.accent)
+                                .padding(.horizontal, Spacing.md)
+                                .padding(.vertical, Spacing.md)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(.ultraThinMaterial)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .strokeBorder(Color.accent.opacity(0.3), lineWidth: 1)
+                                )
+                        }
+
+                        // Available placeholders
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("AVAILABLE PLACEHOLDERS")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.textMuted)
+                                .tracking(2)
+
+                            VStack(spacing: Spacing.xs) {
+                                ForEach(placeholders, id: \.placeholder) { item in
+                                    Button {
+                                        if !tempStructure.isEmpty && !tempStructure.hasSuffix("/") {
+                                            tempStructure += "/"
+                                        }
+                                        tempStructure += item.placeholder
+                                    } label: {
+                                        HStack {
+                                            Text(item.placeholder)
+                                                .font(Typography.bodyMono())
+                                                .foregroundStyle(Color.accent)
+
+                                            Spacer()
+
+                                            Text(item.description)
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundStyle(Color.textMuted)
+                                        }
+                                        .padding(.horizontal, Spacing.md)
+                                        .padding(.vertical, Spacing.sm)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .fill(Color.white.opacity(0.05))
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(Spacing.sm)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+                        }
+
+                        Spacer()
+                    }
+                    .padding(Spacing.lg)
+                }
+            }
+            .navigationTitle("Folder Organization")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(Color.textSecondary)
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        folderStructure = tempStructure
+                        dismiss()
+                    }
+                    .foregroundStyle(Color.accent)
+                    .fontWeight(.semibold)
+                }
+            }
+            .onAppear {
+                tempStructure = folderStructure
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var previewPath: String {
+        let dateFormatter = DateFormatter()
+        let date = Date()
+
+        if tempStructure.isEmpty {
+            return "Health/2025-02-04.md"
+        }
+
+        var result = tempStructure
+
+        // {year} -> yyyy
+        dateFormatter.dateFormat = "yyyy"
+        result = result.replacingOccurrences(of: "{year}", with: dateFormatter.string(from: date))
+
+        // {month} -> MM
+        dateFormatter.dateFormat = "MM"
+        result = result.replacingOccurrences(of: "{month}", with: dateFormatter.string(from: date))
+
+        // {day} -> dd
+        dateFormatter.dateFormat = "dd"
+        result = result.replacingOccurrences(of: "{day}", with: dateFormatter.string(from: date))
+
+        // {weekday} -> Monday, Tuesday, etc.
+        dateFormatter.dateFormat = "EEEE"
+        result = result.replacingOccurrences(of: "{weekday}", with: dateFormatter.string(from: date))
+
+        // {monthName} -> January, February, etc.
+        dateFormatter.dateFormat = "MMMM"
+        result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
+
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        return "Health/\(result)/\(dateFormatter.string(from: date)).md"
     }
 }

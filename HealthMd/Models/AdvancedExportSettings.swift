@@ -27,12 +27,52 @@ enum ExportFormat: String, CaseIterable, Codable {
 struct DataTypeSelection: Codable {
     var sleep: Bool = true
     var activity: Bool = true
+    var heart: Bool = true
     var vitals: Bool = true
     var body: Bool = true
+    var nutrition: Bool = true
+    var mindfulness: Bool = true
+    var mobility: Bool = true
+    var hearing: Bool = true
     var workouts: Bool = true
 
     var hasAnySelected: Bool {
-        sleep || activity || vitals || body || workouts
+        sleep || activity || heart || vitals || body || nutrition ||
+        mindfulness || mobility || hearing || workouts
+    }
+
+    /// Returns the count of enabled data types
+    var enabledCount: Int {
+        [sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing, workouts]
+            .filter { $0 }.count
+    }
+
+    /// Select all data types
+    mutating func selectAll() {
+        sleep = true
+        activity = true
+        heart = true
+        vitals = true
+        body = true
+        nutrition = true
+        mindfulness = true
+        mobility = true
+        hearing = true
+        workouts = true
+    }
+
+    /// Deselect all data types
+    mutating func deselectAll() {
+        sleep = false
+        activity = false
+        heart = false
+        vitals = false
+        body = false
+        nutrition = false
+        mindfulness = false
+        mobility = false
+        hearing = false
+        workouts = false
     }
 }
 
@@ -57,22 +97,39 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
+    @Published var folderStructure: String {
+        didSet { save() }
+    }
+
     private let userDefaults = UserDefaults.standard
     private let dataTypesKey = "advancedExportSettings.dataTypes"
     private let formatKey = "advancedExportSettings.format"
     private let metadataKey = "advancedExportSettings.metadata"
     private let groupByCategoryKey = "advancedExportSettings.groupByCategory"
     private let filenameFormatKey = "advancedExportSettings.filenameFormat"
+    private let folderStructureKey = "advancedExportSettings.folderStructure"
 
     static let defaultFilenameFormat = "{date}"
+    static let defaultFolderStructure = ""  // Empty = flat structure
 
     /// Formats a filename using the current format template and a given date
-    /// Supported placeholders: {date}, {year}, {month}, {day}, {weekday}
+    /// Supported placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}
     func formatFilename(for date: Date) -> String {
-        let calendar = Calendar.current
-        let dateFormatter = DateFormatter()
+        return applyDatePlaceholders(to: filenameFormat, for: date)
+    }
 
-        var result = filenameFormat
+    /// Formats the folder structure path using the current template and a given date
+    /// Returns nil if folder structure is empty (flat structure)
+    /// Supported placeholders: {year}, {month}, {day}, {weekday}, {monthName}
+    func formatFolderPath(for date: Date) -> String? {
+        guard !folderStructure.isEmpty else { return nil }
+        return applyDatePlaceholders(to: folderStructure, for: date)
+    }
+
+    /// Common method to apply date placeholders to a template string
+    private func applyDatePlaceholders(to template: String, for date: Date) -> String {
+        let dateFormatter = DateFormatter()
+        var result = template
 
         // {date} -> yyyy-MM-dd
         dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -136,6 +193,13 @@ class AdvancedExportSettings: ObservableObject {
         } else {
             self.filenameFormat = Self.defaultFilenameFormat
         }
+
+        // Load folder structure
+        if let savedStructure = userDefaults.string(forKey: folderStructureKey) {
+            self.folderStructure = savedStructure
+        } else {
+            self.folderStructure = Self.defaultFolderStructure
+        }
     }
 
     private func save() {
@@ -155,6 +219,9 @@ class AdvancedExportSettings: ObservableObject {
 
         // Save filename format
         userDefaults.set(filenameFormat, forKey: filenameFormatKey)
+
+        // Save folder structure
+        userDefaults.set(folderStructure, forKey: folderStructureKey)
     }
 
     func reset() {
@@ -163,5 +230,6 @@ class AdvancedExportSettings: ObservableObject {
         includeMetadata = true
         groupByCategory = true
         filenameFormat = Self.defaultFilenameFormat
+        folderStructure = Self.defaultFolderStructure
     }
 }

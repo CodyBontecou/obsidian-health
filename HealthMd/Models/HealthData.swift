@@ -201,6 +201,9 @@ extension HealthData {
             if sleep.totalDuration > 0 {
                 markdown += "- **Total:** \(formatDuration(sleep.totalDuration))\n"
             }
+            if sleep.inBedTime > 0 {
+                markdown += "- **In Bed:** \(formatDuration(sleep.inBedTime))\n"
+            }
             if sleep.deepSleep > 0 {
                 markdown += "- **Deep:** \(formatDuration(sleep.deepSleep))\n"
             }
@@ -209,6 +212,9 @@ extension HealthData {
             }
             if sleep.coreSleep > 0 {
                 markdown += "- **Core:** \(formatDuration(sleep.coreSleep))\n"
+            }
+            if sleep.awakeTime > 0 {
+                markdown += "- **Awake:** \(formatDuration(sleep.awakeTime))\n"
             }
         }
 
@@ -558,6 +564,12 @@ extension HealthData {
             if sleep.coreSleep > 0 {
                 frontmatter.append("sleep_core_hours: \(String(format: "%.2f", sleep.coreSleep / 3600))")
             }
+            if sleep.awakeTime > 0 {
+                frontmatter.append("sleep_awake_hours: \(String(format: "%.2f", sleep.awakeTime / 3600))")
+            }
+            if sleep.inBedTime > 0 {
+                frontmatter.append("sleep_in_bed_hours: \(String(format: "%.2f", sleep.inBedTime / 3600))")
+            }
         }
 
         // Activity metrics
@@ -568,30 +580,76 @@ extension HealthData {
             if let calories = activity.activeCalories {
                 frontmatter.append("active_calories: \(Int(calories))")
             }
+            if let basal = activity.basalEnergyBurned {
+                frontmatter.append("basal_calories: \(Int(basal))")
+            }
             if let exercise = activity.exerciseMinutes {
                 frontmatter.append("exercise_minutes: \(Int(exercise))")
+            }
+            if let standHours = activity.standHours {
+                frontmatter.append("stand_hours: \(standHours)")
             }
             if let flights = activity.flightsClimbed {
                 frontmatter.append("flights_climbed: \(flights)")
             }
             if let distance = activity.walkingRunningDistance {
-                frontmatter.append("distance_km: \(String(format: "%.2f", distance / 1000))")
+                frontmatter.append("walking_running_km: \(String(format: "%.2f", distance / 1000))")
+            }
+            if let cycling = activity.cyclingDistance {
+                frontmatter.append("cycling_km: \(String(format: "%.2f", cycling / 1000))")
+            }
+            if let swimming = activity.swimmingDistance {
+                frontmatter.append("swimming_m: \(Int(swimming))")
+            }
+            if let strokes = activity.swimmingStrokes {
+                frontmatter.append("swimming_strokes: \(strokes)")
+            }
+            if let pushes = activity.pushCount {
+                frontmatter.append("wheelchair_pushes: \(pushes)")
+            }
+        }
+
+        // Heart metrics
+        if heart.hasData {
+            if let hr = heart.restingHeartRate {
+                frontmatter.append("resting_heart_rate: \(Int(hr))")
+            }
+            if let walkingHR = heart.walkingHeartRateAverage {
+                frontmatter.append("walking_heart_rate: \(Int(walkingHR))")
+            }
+            if let avgHR = heart.averageHeartRate {
+                frontmatter.append("average_heart_rate: \(Int(avgHR))")
+            }
+            if let minHR = heart.heartRateMin {
+                frontmatter.append("heart_rate_min: \(Int(minHR))")
+            }
+            if let maxHR = heart.heartRateMax {
+                frontmatter.append("heart_rate_max: \(Int(maxHR))")
+            }
+            if let hrv = heart.hrv {
+                frontmatter.append("hrv_ms: \(String(format: "%.1f", hrv))")
             }
         }
 
         // Vitals metrics
         if vitals.hasData {
-            if let hr = vitals.restingHeartRate {
-                frontmatter.append("resting_heart_rate: \(Int(hr))")
-            }
-            if let hrv = vitals.hrv {
-                frontmatter.append("hrv_ms: \(String(format: "%.1f", hrv))")
-            }
             if let rr = vitals.respiratoryRate {
                 frontmatter.append("respiratory_rate: \(String(format: "%.1f", rr))")
             }
             if let spo2 = vitals.bloodOxygen {
                 frontmatter.append("blood_oxygen: \(Int(spo2 * 100))")
+            }
+            if let temp = vitals.bodyTemperature {
+                frontmatter.append("body_temperature: \(String(format: "%.1f", temp))")
+            }
+            if let systolic = vitals.bloodPressureSystolic {
+                frontmatter.append("blood_pressure_systolic: \(Int(systolic))")
+            }
+            if let diastolic = vitals.bloodPressureDiastolic {
+                frontmatter.append("blood_pressure_diastolic: \(Int(diastolic))")
+            }
+            if let glucose = vitals.bloodGlucose {
+                frontmatter.append("blood_glucose: \(String(format: "%.1f", glucose))")
             }
         }
 
@@ -600,8 +658,102 @@ extension HealthData {
             if let weight = body.weight {
                 frontmatter.append("weight_kg: \(String(format: "%.1f", weight))")
             }
+            if let height = body.height {
+                frontmatter.append("height_m: \(String(format: "%.2f", height))")
+            }
+            if let bmi = body.bmi {
+                frontmatter.append("bmi: \(String(format: "%.1f", bmi))")
+            }
             if let bodyFat = body.bodyFatPercentage {
                 frontmatter.append("body_fat_percent: \(String(format: "%.1f", bodyFat * 100))")
+            }
+            if let lean = body.leanBodyMass {
+                frontmatter.append("lean_body_mass_kg: \(String(format: "%.1f", lean))")
+            }
+            if let waist = body.waistCircumference {
+                frontmatter.append("waist_circumference_cm: \(String(format: "%.1f", waist * 100))")
+            }
+        }
+
+        // Nutrition metrics
+        if nutrition.hasData {
+            if let energy = nutrition.dietaryEnergy {
+                frontmatter.append("dietary_calories: \(Int(energy))")
+            }
+            if let protein = nutrition.protein {
+                frontmatter.append("protein_g: \(String(format: "%.1f", protein))")
+            }
+            if let carbs = nutrition.carbohydrates {
+                frontmatter.append("carbohydrates_g: \(String(format: "%.1f", carbs))")
+            }
+            if let fat = nutrition.fat {
+                frontmatter.append("fat_g: \(String(format: "%.1f", fat))")
+            }
+            if let saturatedFat = nutrition.saturatedFat {
+                frontmatter.append("saturated_fat_g: \(String(format: "%.1f", saturatedFat))")
+            }
+            if let fiber = nutrition.fiber {
+                frontmatter.append("fiber_g: \(String(format: "%.1f", fiber))")
+            }
+            if let sugar = nutrition.sugar {
+                frontmatter.append("sugar_g: \(String(format: "%.1f", sugar))")
+            }
+            if let sodium = nutrition.sodium {
+                frontmatter.append("sodium_mg: \(Int(sodium))")
+            }
+            if let cholesterol = nutrition.cholesterol {
+                frontmatter.append("cholesterol_mg: \(String(format: "%.1f", cholesterol))")
+            }
+            if let water = nutrition.water {
+                frontmatter.append("water_l: \(String(format: "%.2f", water))")
+            }
+            if let caffeine = nutrition.caffeine {
+                frontmatter.append("caffeine_mg: \(String(format: "%.1f", caffeine))")
+            }
+        }
+
+        // Mindfulness metrics
+        if mindfulness.hasData {
+            if let minutes = mindfulness.mindfulMinutes {
+                frontmatter.append("mindful_minutes: \(Int(minutes))")
+            }
+            if let sessions = mindfulness.mindfulSessions {
+                frontmatter.append("mindful_sessions: \(sessions)")
+            }
+        }
+
+        // Mobility metrics
+        if mobility.hasData {
+            if let speed = mobility.walkingSpeed {
+                frontmatter.append("walking_speed: \(String(format: "%.2f", speed))")
+            }
+            if let stepLength = mobility.walkingStepLength {
+                frontmatter.append("step_length_cm: \(String(format: "%.1f", stepLength * 100))")
+            }
+            if let doubleSupport = mobility.walkingDoubleSupportPercentage {
+                frontmatter.append("double_support_percent: \(String(format: "%.1f", doubleSupport * 100))")
+            }
+            if let asymmetry = mobility.walkingAsymmetryPercentage {
+                frontmatter.append("walking_asymmetry_percent: \(String(format: "%.1f", asymmetry * 100))")
+            }
+            if let ascent = mobility.stairAscentSpeed {
+                frontmatter.append("stair_ascent_speed: \(String(format: "%.2f", ascent))")
+            }
+            if let descent = mobility.stairDescentSpeed {
+                frontmatter.append("stair_descent_speed: \(String(format: "%.2f", descent))")
+            }
+            if let sixMin = mobility.sixMinuteWalkDistance {
+                frontmatter.append("six_min_walk_m: \(Int(sixMin))")
+            }
+        }
+
+        // Hearing metrics
+        if hearing.hasData {
+            if let headphone = hearing.headphoneAudioLevel {
+                frontmatter.append("headphone_audio_db: \(String(format: "%.1f", headphone))")
+            }
+            if let environmental = hearing.environmentalSoundLevel {
+                frontmatter.append("environmental_sound_db: \(String(format: "%.1f", environmental))")
             }
         }
 
@@ -631,7 +783,7 @@ extension HealthData {
         frontmatter.append("---")
 
         // Build the markdown body
-        var body = "\n# Health — \(dateString)\n"
+        var bodyText = "\n# Health — \(dateString)\n"
 
         // Add a brief summary section
         var summaryItems: [String] = []
@@ -650,6 +802,14 @@ extension HealthData {
             }
         }
 
+        if let calories = nutrition.dietaryEnergy {
+            summaryItems.append("\(Int(calories)) kcal")
+        }
+
+        if let minutes = mindfulness.mindfulMinutes, minutes > 0 {
+            summaryItems.append("\(Int(minutes)) mindful min")
+        }
+
         if !workouts.isEmpty {
             let types = workouts.map { $0.workoutTypeName }
             let uniqueTypes = Array(Set(types))
@@ -661,11 +821,11 @@ extension HealthData {
         }
 
         if !summaryItems.isEmpty {
-            body += "\n" + summaryItems.joined(separator: " · ") + "\n"
+            bodyText += "\n" + summaryItems.joined(separator: " · ") + "\n"
         }
 
-        body += "\n## Notes\n\n"
+        bodyText += "\n## Notes\n\n"
 
-        return frontmatter.joined(separator: "\n") + body
+        return frontmatter.joined(separator: "\n") + bodyText
     }
 }

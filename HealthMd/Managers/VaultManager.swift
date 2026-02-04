@@ -128,25 +128,30 @@ final class VaultManager: ObservableObject {
         }
 
         do {
-            // Create the health subfolder if needed
-            let healthFolderURL: URL
-            if healthSubfolder.isEmpty {
-                healthFolderURL = vaultURL
-            } else {
-                healthFolderURL = vaultURL.appendingPathComponent(healthSubfolder, isDirectory: true)
+            // Build the full folder path: vault / healthSubfolder / folderStructure
+            var targetFolderURL = vaultURL
+
+            // Add health subfolder if set
+            if !healthSubfolder.isEmpty {
+                targetFolderURL = targetFolderURL.appendingPathComponent(healthSubfolder, isDirectory: true)
+            }
+
+            // Add date-based folder structure if configured
+            if let folderPath = settings.formatFolderPath(for: date) {
+                targetFolderURL = targetFolderURL.appendingPathComponent(folderPath, isDirectory: true)
             }
 
             // Create directory if it doesn't exist
             let fileManager = FileManager.default
-            if !fileManager.fileExists(atPath: healthFolderURL.path) {
-                try fileManager.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
+            if !fileManager.fileExists(atPath: targetFolderURL.path) {
+                try fileManager.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
             }
 
             // Generate filename using custom format
             let baseFilename = settings.formatFilename(for: date)
             let filename = "\(baseFilename).\(settings.exportFormat.fileExtension)"
 
-            let fileURL = healthFolderURL.appendingPathComponent(filename)
+            let fileURL = targetFolderURL.appendingPathComponent(filename)
 
             // Generate content based on format and settings
             let content = healthData.export(format: settings.exportFormat, settings: settings)
@@ -179,25 +184,30 @@ final class VaultManager: ObservableObject {
 
         defer { vaultURL.stopAccessingSecurityScopedResource() }
 
-        // Create the health subfolder if needed
-        let healthFolderURL: URL
-        if healthSubfolder.isEmpty {
-            healthFolderURL = vaultURL
-        } else {
-            healthFolderURL = vaultURL.appendingPathComponent(healthSubfolder, isDirectory: true)
+        // Build the full folder path: vault / healthSubfolder / folderStructure
+        var targetFolderURL = vaultURL
+
+        // Add health subfolder if set
+        if !healthSubfolder.isEmpty {
+            targetFolderURL = targetFolderURL.appendingPathComponent(healthSubfolder, isDirectory: true)
+        }
+
+        // Add date-based folder structure if configured
+        if let folderPath = settings.formatFolderPath(for: healthData.date) {
+            targetFolderURL = targetFolderURL.appendingPathComponent(folderPath, isDirectory: true)
         }
 
         // Create directory if it doesn't exist
         let fileManager = FileManager.default
-        if !fileManager.fileExists(atPath: healthFolderURL.path) {
-            try fileManager.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
+        if !fileManager.fileExists(atPath: targetFolderURL.path) {
+            try fileManager.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
         }
 
         // Generate filename using custom format
         let baseFilename = settings.formatFilename(for: healthData.date)
         let filename = "\(baseFilename).\(settings.exportFormat.fileExtension)"
 
-        let fileURL = healthFolderURL.appendingPathComponent(filename)
+        let fileURL = targetFolderURL.appendingPathComponent(filename)
 
         // Generate content based on format and settings
         let content = healthData.export(format: settings.exportFormat, settings: settings)
@@ -205,7 +215,15 @@ final class VaultManager: ObservableObject {
         // Write file
         try content.write(to: fileURL, atomically: true, encoding: .utf8)
 
-        lastExportStatus = "Exported to \(healthSubfolder.isEmpty ? "" : healthSubfolder + "/")\(filename)"
+        // Build status message showing the relative path
+        var relativePath = ""
+        if !healthSubfolder.isEmpty {
+            relativePath += healthSubfolder + "/"
+        }
+        if let folderPath = settings.formatFolderPath(for: healthData.date) {
+            relativePath += folderPath + "/"
+        }
+        lastExportStatus = "Exported to \(relativePath)\(filename)"
     }
 }
 

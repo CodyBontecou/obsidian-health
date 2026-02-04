@@ -18,6 +18,9 @@ struct ContentView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var statusDismissTimer: Timer?
+    @State private var showSubfolderPrompt = false
+    @State private var pendingFolderURL: URL?
+    @State private var tempSubfolderName = ""
 
     var body: some View {
         ZStack {
@@ -75,10 +78,32 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in
-                vaultManager.setVaultFolder(url)
+                pendingFolderURL = url
+                tempSubfolderName = vaultManager.healthSubfolder
+                showSubfolderPrompt = true
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
+            TextField("Health", text: $tempSubfolderName)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button("Cancel", role: .cancel) {
+                pendingFolderURL = nil
+                tempSubfolderName = ""
+            }
+            Button("Save") {
+                if let url = pendingFolderURL {
+                    vaultManager.setVaultFolder(url)
+                    vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
+                    vaultManager.saveSubfolderSetting()
+                }
+                pendingFolderURL = nil
+                tempSubfolderName = ""
+            }
+        } message: {
+            Text("Enter a name for the subfolder where your health data will be exported.")
         }
         .sheet(isPresented: $showExportModal) {
             ExportModal(
