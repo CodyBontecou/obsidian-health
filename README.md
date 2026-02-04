@@ -2,12 +2,11 @@
 
 [Download on the App Store](https://apps.apple.com/us/app/health-md/id6757763969)
 
-Health.md is an iOS app that exports Apple Health data into an Obsidian vault as human‑readable Markdown (or structured JSON/CSV). This repository also includes an optional Obsidian plugin for rendering beautiful health dashboards and charts.
+Health.md is an iOS app that exports Apple Health data to your device's filesystem as human‑readable Markdown (or structured JSON/CSV). Your health data stays local and accessible in the Files app or any markdown-compatible app.
 
-## What’s Included
+## What's Included
 
-- **iOS app (SwiftUI)**: Collects HealthKit metrics and exports them into your vault with configurable formats, filenames, and schedules.
-- **Obsidian plugin**: Renders activity rings, sleep charts, vitals, and workout summaries from exported files.
+- **iOS app (SwiftUI)**: Collects HealthKit metrics and exports them to your device with configurable formats, filenames, and schedules.
 
 ## Features
 
@@ -16,16 +15,9 @@ Health.md is an iOS app that exports Apple Health data into an Obsidian vault as
 - **Manual export** for a date range with progress and error handling.
 - **Scheduled exports** (daily or weekly) using Background Tasks + HealthKit background delivery.
 - **Export history** with retry support for failed dates.
-- **Flexible formats**: Markdown, Obsidian Bases frontmatter, JSON, or CSV.
+- **Flexible formats**: Markdown, frontmatter-based Markdown, JSON, or CSV.
 - **Custom filename templates** (e.g. `{date}`, `{year}`, `{month}`, `{weekday}`).
-- **Vault folder picker** with optional `Health` subfolder.
-
-### Obsidian Plugin
-- Apple Health‑inspired charts (activity rings, sleep analysis, vitals, workouts).
-- Works automatically with exported Markdown/JSON.
-- Configurable goals and styling.
-
-See [`obsidian-health-charts-plugin/README.md`](obsidian-health-charts-plugin/README.md) for plugin installation and usage, including iOS installation steps.
+- **Folder picker** with optional `Health` subfolder organization.
 
 ## Supported Data
 
@@ -38,7 +30,7 @@ See [`obsidian-health-charts-plugin/README.md`](obsidian-health-charts-plugin/RE
 ## Export Formats
 
 - **Markdown** with optional frontmatter and grouped sections
-- **Obsidian Bases** (frontmatter-only metrics for querying)
+- **Frontmatter-only** (metrics in YAML frontmatter for querying)
 - **JSON** (structured output for analysis)
 - **CSV** (one row per metric)
 
@@ -47,13 +39,12 @@ See [`obsidian-health-charts-plugin/README.md`](obsidian-health-charts-plugin/RE
 ### Requirements
 - macOS with **Xcode**
 - iOS device with Health data (HealthKit access is limited in the simulator)
-- An Obsidian vault on device or iCloud Drive
 
 ### Run the App
 1. Open `HealthMd.xcodeproj` in Xcode.
 2. Select a real device, configure signing, and run.
 3. On first launch, grant HealthKit permissions.
-4. Choose your Obsidian vault folder.
+4. Choose your export folder (accessible via the Files app, iCloud Drive, or any location).
 5. Export manually or configure scheduled exports.
 
 ### Scheduling Notes
@@ -65,9 +56,8 @@ Scheduled exports rely on iOS background task scheduling. If the device is locke
 .
 ├── HealthMd/           # SwiftUI app source
 ├── HealthMd.xcodeproj/ # Xcode project
-├── obsidian-health-charts-plugin/ # Obsidian charts plugin
 ```
 
 ## Privacy
 
-All exports are written locally to your Obsidian vault. No health data is sent to external services.
+All exports are written locally to your chosen folder. No health data is sent to external services.
