@@ -1,5 +1,7 @@
 # Obsidian Health
 
+[Download on the App Store](https://apps.apple.com/us/app/obsidian-health/id6757763969)
+
 Obsidian Health is an iOS app that exports Apple Health data into an Obsidian vault as human‑readable Markdown (or structured JSON/CSV). This repository also includes an optional Obsidian plugin for rendering beautiful health dashboards and charts.
 
 ## What’s Included
