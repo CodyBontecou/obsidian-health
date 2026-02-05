@@ -11,6 +11,9 @@ final class VaultManager: ObservableObject {
 
     private let bookmarkKey = "obsidianVaultBookmark"
     private let subfolderKey = "healthSubfolder"
+    
+    /// Individual entry exporter for granular tracking
+    private let individualExporter = IndividualEntryExporter()
 
     init() {
         loadSavedSettings()
@@ -168,6 +171,15 @@ final class VaultManager: ObservableObject {
 
             // Write file
             try finalContent.write(to: fileURL, atomically: true, encoding: .utf8)
+            
+            // Export individual entries if enabled
+            if settings.individualTracking.globalEnabled {
+                _ = try exportIndividualEntries(
+                    from: healthData,
+                    to: targetFolderURL,
+                    settings: settings
+                )
+            }
 
             return true
         } catch {
@@ -237,6 +249,16 @@ final class VaultManager: ObservableObject {
 
         // Write file
         try finalContent.write(to: fileURL, atomically: true, encoding: .utf8)
+        
+        // Export individual entries if enabled
+        var individualEntriesCount = 0
+        if settings.individualTracking.globalEnabled {
+            individualEntriesCount = try exportIndividualEntries(
+                from: healthData,
+                to: targetFolderURL,
+                settings: settings
+            )
+        }
 
         // Build status message showing the relative path
         var relativePath = ""
@@ -247,7 +269,38 @@ final class VaultManager: ObservableObject {
             relativePath += folderPath + "/"
         }
         let action = didAppend ? "Appended to" : "Exported to"
-        lastExportStatus = "\(action) \(relativePath)\(filename)"
+        var statusMessage = "\(action) \(relativePath)\(filename)"
+        if individualEntriesCount > 0 {
+            statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
+        }
+        lastExportStatus = statusMessage
+    }
+    
+    // MARK: - Individual Entry Export
+    
+    /// Export individual timestamped entries for configured metrics
+    private func exportIndividualEntries(
+        from healthData: HealthData,
+        to baseURL: URL,
+        settings: AdvancedExportSettings
+    ) throws -> Int {
+        let trackingSettings = settings.individualTracking
+        
+        // Extract samples that should be tracked individually
+        let samples = individualExporter.extractIndividualSamples(
+            from: healthData,
+            settings: trackingSettings
+        )
+        
+        guard !samples.isEmpty else { return 0 }
+        
+        // Export the samples
+        return try individualExporter.exportIndividualEntries(
+            samples: samples,
+            to: baseURL,
+            settings: trackingSettings,
+            formatSettings: settings.formatCustomization
+        )
     }
 }
 

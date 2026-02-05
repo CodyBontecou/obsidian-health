@@ -91,6 +91,53 @@ struct AdvancedSettingsView: View {
                         .font(Typography.caption())
                         .foregroundColor(Color.textMuted)
                 }
+                
+                // Individual Entry Tracking Section
+                Section {
+                    NavigationLink {
+                        IndividualTrackingView(
+                            settings: settings.individualTracking,
+                            metricSelection: settings.metricSelection
+                        )
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 8) {
+                                    Text("Individual Entry Tracking")
+                                        .font(Typography.body())
+                                    
+                                    if settings.individualTracking.globalEnabled && settings.individualTracking.totalEnabledCount > 0 {
+                                        Text("\(settings.individualTracking.totalEnabledCount)")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(
+                                                Capsule()
+                                                    .fill(Color.accent)
+                                            )
+                                    }
+                                }
+                                Text(individualTrackingSummary)
+                                    .font(Typography.caption())
+                                    .foregroundColor(Color.textSecondary)
+                            }
+                            Spacer()
+                            if settings.individualTracking.globalEnabled {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(Color.accent)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Granular Tracking")
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textSecondary)
+                } footer: {
+                    Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
+                        .font(Typography.caption())
+                        .foregroundColor(Color.textMuted)
+                }
 
                 // Write Mode Section
                 Section {
@@ -194,6 +241,18 @@ struct AdvancedSettingsView: View {
         parts.append(fc.timeFormat == .hour12 || fc.timeFormat == .hour12WithSeconds ? "12h" : "24h")
         
         return parts.joined(separator: " · ")
+    }
+    
+    private var individualTrackingSummary: String {
+        let it = settings.individualTracking
+        if !it.globalEnabled {
+            return "Disabled"
+        }
+        let count = it.totalEnabledCount
+        if count == 0 {
+            return "Enabled · No metrics selected"
+        }
+        return "Enabled · \(count) metric\(count == 1 ? "" : "s")"
     }
 
     private var previewText: String {

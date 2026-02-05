@@ -34,6 +34,56 @@ Health.md is an iOS app that exports Apple Health data to your device's filesyst
 - **JSON** (structured output for analysis)
 - **CSV** (one row per metric)
 
+## Individual Entry Tracking
+
+In addition to daily summaries, Health.md can create **individual timestamped files** for specific metrics. This is useful for:
+
+- **Mood tracking**: Each mood entry gets its own file with valence, labels, and associations
+- **Workouts**: Each workout saved as a separate file with duration, calories, distance
+- **Vitals**: Blood pressure, glucose readings as individual entries
+
+### How to Enable
+
+1. Go to **Settings → Advanced → Individual Entry Tracking**
+2. Toggle **Enable Individual Entry Tracking**
+3. Select which metrics to track individually (or use "Enable Suggested")
+4. Configure folder structure and filename template
+
+### File Structure
+
+```
+vault/
+├── Health/
+│   └── 2026-02-05.md              # Daily summary
+└── entries/
+    ├── mindfulness/
+    │   ├── 2026_02_05_1030_daily_mood.md
+    │   └── 2026_02_05_1545_momentary_emotions.md
+    ├── workouts/
+    │   └── 2026_02_05_0700_workouts.md
+    └── vitals/
+        └── 2026_02_05_0900_blood_pressure.md
+```
+
+### Example Individual Entry
+
+```yaml
+---
+date: 2026-02-05
+time: "10:30"
+datetime: 2026-02-05T10:30:00Z
+type: mindfulness
+metric: daily_mood
+value: 0.7
+feeling: Pleasant
+labels:
+  - Happy
+  - Calm
+associations:
+  - Work
+---
+```
+
 ## Getting Started (iOS App)
 
 ### Requirements

@@ -221,6 +221,11 @@ struct ExportModal: View {
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(Color.textMuted)
                         }
+                        
+                        // Individual Tracking Section
+                        if exportSettings.individualTracking.globalEnabled {
+                            IndividualTrackingExportPreview(settings: exportSettings.individualTracking)
+                        }
 
                         Spacer()
                     }
@@ -959,6 +964,119 @@ struct SubfolderEditor: View {
             return "MyVault/\(dateString).md"
         } else {
             return "MyVault/\(folderName)/\(dateString).md"
+        }
+    }
+}
+
+// MARK: - Individual Tracking Export Preview
+
+struct IndividualTrackingExportPreview: View {
+    @ObservedObject var settings: IndividualTrackingSettings
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Text("INDIVIDUAL ENTRIES")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.textMuted)
+                    .tracking(2)
+                
+                Spacer()
+                
+                // Badge showing count
+                if settings.totalEnabledCount > 0 {
+                    Text("\(settings.totalEnabledCount) metric\(settings.totalEnabledCount == 1 ? "" : "s")")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.accent)
+                        )
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.accent)
+                    
+                    Text("Will create individual files for:")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.textPrimary)
+                }
+                
+                // List enabled categories with counts
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(enabledCategories, id: \.self) { category in
+                        HStack(spacing: 6) {
+                            Image(systemName: category.icon)
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.accent.opacity(0.8))
+                                .frame(width: 16)
+                            
+                            Text(category.rawValue)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.textSecondary)
+                            
+                            Text("(\(settings.enabledCount(for: category)))")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                }
+                .padding(.leading, 24)
+                
+                // Folder preview
+                HStack(spacing: 6) {
+                    Image(systemName: "folder")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.textMuted)
+                    
+                    Text(folderPreview)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundStyle(Color.textMuted)
+                }
+                .padding(.top, 4)
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color.accent.opacity(0.2), lineWidth: 1)
+            )
+            
+            Text("Individual entries are created in addition to daily summaries")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.textMuted)
+        }
+    }
+    
+    private var enabledCategories: [HealthMetricCategory] {
+        HealthMetricCategory.allCases.filter { category in
+            settings.enabledCount(for: category) > 0
+        }
+    }
+    
+    private var folderPreview: String {
+        if settings.useCategoryFolders {
+            if enabledCategories.isEmpty {
+                return "\(settings.entriesFolder)/{category}/"
+            }
+            // Show first enabled category as example
+            let firstCategory = enabledCategories.first!
+            let folderName = firstCategory.rawValue
+                .lowercased()
+                .replacingOccurrences(of: " ", with: "_")
+            return "\(settings.entriesFolder)/\(folderName)/..."
+        } else {
+            return "\(settings.entriesFolder)/"
         }
     }
 }

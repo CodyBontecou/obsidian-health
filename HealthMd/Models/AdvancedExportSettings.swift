@@ -227,6 +227,11 @@ class AdvancedExportSettings: ObservableObject {
     @Published var formatCustomization: FormatCustomization {
         didSet { saveFormatCustomization() }
     }
+    
+    // Individual entry tracking settings
+    @Published var individualTracking: IndividualTrackingSettings {
+        didSet { saveIndividualTracking() }
+    }
 
     private let userDefaults = UserDefaults.standard
     private let dataTypesKey = "advancedExportSettings.dataTypes"
@@ -238,6 +243,7 @@ class AdvancedExportSettings: ObservableObject {
     private let folderStructureKey = "advancedExportSettings.folderStructure"
     private let writeModeKey = "advancedExportSettings.writeMode"
     private let formatCustomizationKey = "advancedExportSettings.formatCustomization"
+    private let individualTrackingKey = "advancedExportSettings.individualTracking"
 
     static let defaultFilenameFormat = "{date}"
     static let defaultFolderStructure = ""  // Empty = flat structure
@@ -355,6 +361,14 @@ class AdvancedExportSettings: ObservableObject {
         } else {
             self.formatCustomization = FormatCustomization()
         }
+        
+        // Load individual tracking settings
+        if let data = userDefaults.data(forKey: individualTrackingKey),
+           let decoded = try? JSONDecoder().decode(IndividualTrackingSettings.self, from: data) {
+            self.individualTracking = decoded
+        } else {
+            self.individualTracking = IndividualTrackingSettings()
+        }
     }
 
     private func saveMetricSelection() {
@@ -366,6 +380,12 @@ class AdvancedExportSettings: ObservableObject {
     private func saveFormatCustomization() {
         if let encoded = try? JSONEncoder().encode(formatCustomization) {
             userDefaults.set(encoded, forKey: formatCustomizationKey)
+        }
+    }
+    
+    private func saveIndividualTracking() {
+        if let encoded = try? JSONEncoder().encode(individualTracking) {
+            userDefaults.set(encoded, forKey: individualTrackingKey)
         }
     }
 
@@ -404,6 +424,7 @@ class AdvancedExportSettings: ObservableObject {
         folderStructure = Self.defaultFolderStructure
         writeMode = .overwrite
         formatCustomization = FormatCustomization()
+        individualTracking = IndividualTrackingSettings()
     }
 
     /// Check if a specific metric is enabled for export
