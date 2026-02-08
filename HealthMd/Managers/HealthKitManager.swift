@@ -393,6 +393,32 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Sleep Data
 
+    /// Merges an array of (start, end) intervals, combining any that overlap or are adjacent.
+    /// Returns the merged intervals sorted by start date.
+    private func mergeIntervals(_ intervals: [(start: Date, end: Date)]) -> [(start: Date, end: Date)] {
+        guard !intervals.isEmpty else { return [] }
+
+        let sorted = intervals.sorted { $0.start < $1.start }
+        var merged: [(start: Date, end: Date)] = [sorted[0]]
+
+        for interval in sorted.dropFirst() {
+            if interval.start <= merged[merged.count - 1].end {
+                // Overlapping or adjacent — extend the current merged interval
+                merged[merged.count - 1].end = max(merged[merged.count - 1].end, interval.end)
+            } else {
+                merged.append(interval)
+            }
+        }
+
+        return merged
+    }
+
+    /// Computes total duration from merged intervals.
+    private func totalDuration(of intervals: [(start: Date, end: Date)]) -> TimeInterval {
+        let merged = mergeIntervals(intervals)
+        return merged.reduce(0) { $0 + $1.end.timeIntervalSince($1.start) }
+    }
+
     private func fetchSleepData(for date: Date) async throws -> SleepData {
         var sleepData = SleepData()
 
@@ -416,29 +442,46 @@ final class HealthKitManager: ObservableObject {
 
         let samples = try await descriptor.result(for: healthStore)
 
+        // Collect intervals per sleep category to merge overlapping samples from multiple sources
+        var deepIntervals: [(start: Date, end: Date)] = []
+        var remIntervals: [(start: Date, end: Date)] = []
+        var coreIntervals: [(start: Date, end: Date)] = []
+        var unspecifiedIntervals: [(start: Date, end: Date)] = []
+        var awakeIntervals: [(start: Date, end: Date)] = []
+        var inBedIntervals: [(start: Date, end: Date)] = []
+
         for sample in samples {
-            let duration = sample.endDate.timeIntervalSince(sample.startDate)
+            let interval = (start: sample.startDate, end: sample.endDate)
 
             switch sample.value {
             case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
-                sleepData.deepSleep += duration
-                sleepData.totalDuration += duration
+                deepIntervals.append(interval)
             case HKCategoryValueSleepAnalysis.asleepREM.rawValue:
-                sleepData.remSleep += duration
-                sleepData.totalDuration += duration
+                remIntervals.append(interval)
             case HKCategoryValueSleepAnalysis.asleepCore.rawValue:
-                sleepData.coreSleep += duration
-                sleepData.totalDuration += duration
+                coreIntervals.append(interval)
             case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
-                sleepData.totalDuration += duration
+                unspecifiedIntervals.append(interval)
             case HKCategoryValueSleepAnalysis.awake.rawValue:
-                sleepData.awakeTime += duration
+                awakeIntervals.append(interval)
             case HKCategoryValueSleepAnalysis.inBed.rawValue:
-                sleepData.inBedTime += duration
+                inBedIntervals.append(interval)
             default:
                 break
             }
         }
+
+        // Compute per-stage durations from merged (deduplicated) intervals
+        sleepData.deepSleep = totalDuration(of: deepIntervals)
+        sleepData.remSleep = totalDuration(of: remIntervals)
+        sleepData.coreSleep = totalDuration(of: coreIntervals)
+        sleepData.awakeTime = totalDuration(of: awakeIntervals)
+        sleepData.inBedTime = totalDuration(of: inBedIntervals)
+
+        // Compute total asleep duration by merging ALL asleep intervals together
+        // This avoids double-counting when different sources report overlapping sleep periods
+        let allAsleepIntervals = deepIntervals + remIntervals + coreIntervals + unspecifiedIntervals
+        sleepData.totalDuration = totalDuration(of: allAsleepIntervals)
 
         return sleepData
     }
