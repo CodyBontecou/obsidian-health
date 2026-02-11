@@ -187,97 +187,44 @@ struct ContentView: View {
                 exportProgress = 0.0
             }
 
-            var dates: [Date] = []
-            var currentDate = startDate
-            let calendar = Calendar.current
+            let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
 
-            currentDate = calendar.startOfDay(for: currentDate)
-            let normalizedEndDate = calendar.startOfDay(for: endDate)
-            let normalizedStartDate = currentDate
-
-            while currentDate <= normalizedEndDate {
-                dates.append(currentDate)
-                guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else {
-                    break
+            let result = await ExportOrchestrator.exportDates(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: advancedSettings,
+                onProgress: { current, total, dateStr in
+                    exportStatusMessage = "Exporting \(dateStr)... (\(current)/\(total))"
+                    exportProgress = Double(current) / Double(total)
                 }
-                currentDate = nextDate
-            }
+            )
 
-            let totalDays = dates.count
-            var successCount = 0
-            var failedDateDetails: [FailedDateDetail] = []
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let normalizedStartDate = dates.first ?? startDate
+            let normalizedEndDate = dates.last ?? endDate
 
-            for (index, date) in dates.enumerated() {
-                exportStatusMessage = "Exporting \(dateFormatter.string(from: date))... (\(index + 1)/\(totalDays))"
+            ExportOrchestrator.recordResult(
+                result,
+                source: .manual,
+                dateRangeStart: normalizedStartDate,
+                dateRangeEnd: normalizedEndDate
+            )
 
-                do {
-                    let healthData = try await healthKitManager.fetchHealthData(for: date)
-                    try await vaultManager.exportHealthData(healthData, settings: advancedSettings)
-                    successCount += 1
-                } catch let error as ExportError {
-                    let reason: ExportFailureReason
-                    switch error {
-                    case .noVaultSelected:
-                        reason = .noVaultSelected
-                    case .noHealthData:
-                        reason = .noHealthData
-                    case .accessDenied:
-                        reason = .accessDenied
-                    }
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: reason))
-                } catch {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .unknown, errorDetails: error.localizedDescription))
-                }
-
-                exportProgress = Double(index + 1) / Double(totalDays)
-            }
-
-            if failedDateDetails.isEmpty {
-                exportStatusMessage = "Successfully exported \(successCount) file\(successCount == 1 ? "" : "s")"
-                vaultManager.lastExportStatus = "Exported \(successCount) file\(successCount == 1 ? "" : "s")"
-
-                exportHistory.recordSuccess(
-                    source: .manual,
-                    dateRangeStart: normalizedStartDate,
-                    dateRangeEnd: normalizedEndDate,
-                    successCount: successCount,
-                    totalCount: totalDays
-                )
-
+            if result.isFullSuccess {
+                exportStatusMessage = "Successfully exported \(result.successCount) file\(result.successCount == 1 ? "" : "s")"
+                vaultManager.lastExportStatus = "Exported \(result.successCount) file\(result.successCount == 1 ? "" : "s")"
                 startStatusDismissTimer()
-            } else if successCount > 0 {
-                let failedDatesStr = failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                exportStatusMessage = "Exported \(successCount)/\(totalDays) files. Failed: \(failedDatesStr)"
-                vaultManager.lastExportStatus = "Partial export: \(successCount)/\(totalDays) succeeded"
-
-                exportHistory.recordSuccess(
-                    source: .manual,
-                    dateRangeStart: normalizedStartDate,
-                    dateRangeEnd: normalizedEndDate,
-                    successCount: successCount,
-                    totalCount: totalDays,
-                    failedDateDetails: failedDateDetails
-                )
-
+            } else if result.isPartialSuccess {
+                let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
+                exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. Failed: \(failedDatesStr)"
+                vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) succeeded"
                 startStatusDismissTimer()
             } else {
-                let primaryReason = failedDateDetails.first?.reason ?? .unknown
+                let primaryReason = result.primaryFailureReason ?? .unknown
                 exportStatusMessage = "Export failed: \(primaryReason.shortDescription)"
                 vaultManager.lastExportStatus = primaryReason.shortDescription
 
-                exportHistory.recordFailure(
-                    source: .manual,
-                    dateRangeStart: normalizedStartDate,
-                    dateRangeEnd: normalizedEndDate,
-                    reason: primaryReason,
-                    successCount: 0,
-                    totalCount: totalDays,
-                    failedDateDetails: failedDateDetails
-                )
-
-                if let firstFailedDetail = failedDateDetails.first {
+                if let firstFailedDetail = result.failedDateDetails.first {
                     errorMessage = firstFailedDetail.detailedMessage
                 } else {
                     errorMessage = primaryReason.detailedDescription
