@@ -196,7 +196,10 @@ class AdvancedExportSettings: ObservableObject {
 
     // New comprehensive metric selection
     @Published var metricSelection: MetricSelectionState {
-        didSet { saveMetricSelection() }
+        didSet {
+            saveMetricSelection()
+            subscribeToMetricSelection()
+        }
     }
 
     @Published var exportFormat: ExportFormat {
@@ -225,15 +228,26 @@ class AdvancedExportSettings: ObservableObject {
     
     // Format customization settings
     @Published var formatCustomization: FormatCustomization {
-        didSet { saveFormatCustomization() }
+        didSet {
+            saveFormatCustomization()
+            subscribeToFormatCustomization()
+        }
     }
     
     // Individual entry tracking settings
     @Published var individualTracking: IndividualTrackingSettings {
-        didSet { saveIndividualTracking() }
+        didSet {
+            saveIndividualTracking()
+            subscribeToIndividualTracking()
+        }
     }
 
     private let userDefaults = UserDefaults.standard
+    
+    /// Combine subscriptions for observing nested ObservableObject changes
+    private var metricSelectionCancellable: AnyCancellable?
+    private var individualTrackingCancellable: AnyCancellable?
+    private var formatCustomizationCancellable: AnyCancellable?
     private let dataTypesKey = "advancedExportSettings.dataTypes"
     private let metricSelectionKey = "advancedExportSettings.metricSelection"
     private let formatKey = "advancedExportSettings.format"
@@ -369,6 +383,40 @@ class AdvancedExportSettings: ObservableObject {
         } else {
             self.individualTracking = IndividualTrackingSettings()
         }
+        
+        // Subscribe to nested ObservableObject changes so internal mutations
+        // (e.g. toggling a metric) are persisted to UserDefaults.
+        // didSet only fires when the entire object reference is reassigned,
+        // NOT when @Published properties inside the object change.
+        subscribeToMetricSelection()
+        subscribeToIndividualTracking()
+        subscribeToFormatCustomization()
+    }
+    
+    // MARK: - Nested ObservableObject Subscriptions
+    
+    private func subscribeToMetricSelection() {
+        metricSelectionCancellable = metricSelection.objectWillChange
+            .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.saveMetricSelection()
+            }
+    }
+    
+    private func subscribeToIndividualTracking() {
+        individualTrackingCancellable = individualTracking.objectWillChange
+            .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.saveIndividualTracking()
+            }
+    }
+    
+    private func subscribeToFormatCustomization() {
+        formatCustomizationCancellable = formatCustomization.objectWillChange
+            .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.saveFormatCustomization()
+            }
     }
 
     private func saveMetricSelection() {
