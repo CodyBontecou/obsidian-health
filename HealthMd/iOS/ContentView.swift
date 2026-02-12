@@ -3,6 +3,7 @@ import UIKit
 
 struct ContentView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var syncService: SyncService
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
@@ -19,6 +20,7 @@ struct ContentView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var statusDismissTimer: Timer?
+    @State private var exportTask: Task<Void, Never>?
     @State private var showSubfolderPrompt = false
     @State private var pendingFolderURL: URL?
     @State private var tempSubfolderName = ""
@@ -40,7 +42,8 @@ struct ContentView: View {
                         exportStatusMessage: $exportStatusMessage,
                         showExportModal: $showExportModal,
                         showFolderPicker: $showFolderPicker,
-                        canExport: canExport
+                        canExport: canExport,
+                        onCancelExport: cancelExport
                     )
                 case .schedule:
                     ScheduleTabView()
@@ -173,7 +176,30 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
     }
 
+    // MARK: - Auto-Sync
+
+    private func autoSyncDates(_ dates: [Date]) async {
+        var records: [HealthData] = []
+        for date in dates {
+            if let data = try? await healthKitManager.fetchHealthData(for: date), data.hasAnyData {
+                records.append(data)
+            }
+        }
+        guard !records.isEmpty else { return }
+
+        let payload = SyncPayload(
+            deviceName: UIDevice.current.name,
+            syncTimestamp: Date(),
+            healthRecords: records
+        )
+        syncService.sendLargePayload(.healthData(payload))
+    }
+
     // MARK: - Export
+
+    private func cancelExport() {
+        exportTask?.cancel()
+    }
 
     private func exportData() {
         isExporting = true
@@ -181,10 +207,11 @@ struct ContentView: View {
         exportStatusMessage = ""
         statusDismissTimer?.invalidate()
 
-        Task {
+        exportTask = Task {
             defer {
                 isExporting = false
                 exportProgress = 0.0
+                exportTask = nil
             }
 
             let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
@@ -210,7 +237,24 @@ struct ContentView: View {
                 dateRangeEnd: normalizedEndDate
             )
 
-            if result.isFullSuccess {
+            // Auto-sync to Mac after successful export
+            if result.successCount > 0,
+               syncService.connectionState == .connected,
+               UserDefaults.standard.bool(forKey: "syncEnabled"),
+               UserDefaults.standard.bool(forKey: "autoSyncAfterExport") {
+                await autoSyncDates(dates)
+            }
+
+            if result.wasCancelled {
+                if result.successCount > 0 {
+                    exportStatusMessage = "Export stopped — \(result.successCount) of \(result.totalCount) file\(result.successCount == 1 ? "" : "s") exported"
+                    vaultManager.lastExportStatus = "Export stopped: \(result.successCount)/\(result.totalCount) exported"
+                } else {
+                    exportStatusMessage = "Export cancelled"
+                    vaultManager.lastExportStatus = "Export cancelled"
+                }
+                startStatusDismissTimer()
+            } else if result.isFullSuccess {
                 exportStatusMessage = "Successfully exported \(result.successCount) file\(result.successCount == 1 ? "" : "s")"
                 vaultManager.lastExportStatus = "Exported \(result.successCount) file\(result.successCount == 1 ? "" : "s")"
                 startStatusDismissTimer()
@@ -246,6 +290,7 @@ struct ExportTabView: View {
     @Binding var showExportModal: Bool
     @Binding var showFolderPicker: Bool
     let canExport: Bool
+    var onCancelExport: (() -> Void)?
     
     @State private var showHealthPermissionsGuide = false
 
@@ -350,6 +395,30 @@ struct ExportTabView: View {
                         ProgressView(value: exportProgress)
                             .tint(.accent)
                             .frame(maxWidth: .infinity)
+
+                        Button {
+                            onCancelExport?()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "stop.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text("Stop Export")
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                            .foregroundStyle(Color.red)
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.sm)
+                            .background(
+                                Capsule()
+                                    .fill(Color.red.opacity(0.15))
+                            )
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, Spacing.xs)
                     }
                     .padding(.horizontal, Spacing.md)
                     .padding(.vertical, Spacing.sm)
@@ -496,6 +565,7 @@ struct SettingsTabView: View {
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @Binding var showFolderPicker: Bool
     @State private var showAdvancedSettings = false
+    @State private var showSyncSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -569,12 +639,31 @@ struct SettingsTabView: View {
                     isActive: true,
                     action: { showAdvancedSettings = true }
                 )
+
+                // Mac sync
+                SettingsRow(
+                    icon: "arrow.triangle.2.circlepath",
+                    title: "Mac Sync",
+                    subtitle: "Send data to your Mac",
+                    isActive: UserDefaults.standard.bool(forKey: "syncEnabled"),
+                    action: { showSyncSettings = true }
+                )
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.bottom, Spacing.xl)
         }
         .sheet(isPresented: $showAdvancedSettings) {
             AdvancedSettingsView(settings: advancedSettings)
+        }
+        .sheet(isPresented: $showSyncSettings) {
+            NavigationStack {
+                SyncSettingsView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showSyncSettings = false }
+                        }
+                    }
+            }
         }
     }
 }

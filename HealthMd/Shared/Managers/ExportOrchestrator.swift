@@ -12,9 +12,17 @@ struct ExportOrchestrator {
         let successCount: Int
         let totalCount: Int
         let failedDateDetails: [FailedDateDetail]
+        let wasCancelled: Bool
 
-        var isFullSuccess: Bool { successCount == totalCount && totalCount > 0 }
-        var isPartialSuccess: Bool { successCount > 0 && successCount < totalCount }
+        init(successCount: Int, totalCount: Int, failedDateDetails: [FailedDateDetail], wasCancelled: Bool = false) {
+            self.successCount = successCount
+            self.totalCount = totalCount
+            self.failedDateDetails = failedDateDetails
+            self.wasCancelled = wasCancelled
+        }
+
+        var isFullSuccess: Bool { successCount == totalCount && totalCount > 0 && !wasCancelled }
+        var isPartialSuccess: Bool { (successCount > 0 && successCount < totalCount) || (successCount > 0 && wasCancelled) }
         var isFailure: Bool { successCount == 0 && totalCount > 0 }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
     }
@@ -55,6 +63,16 @@ struct ExportOrchestrator {
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
         for (index, date) in dates.enumerated() {
+            // Check for cancellation before each date
+            if Task.isCancelled {
+                return ExportResult(
+                    successCount: successCount,
+                    totalCount: totalDays,
+                    failedDateDetails: failedDateDetails,
+                    wasCancelled: true
+                )
+            }
+
             let dateString = dateFormatter.string(from: date)
             onProgress?(index + 1, totalDays, dateString)
 
@@ -99,6 +117,16 @@ struct ExportOrchestrator {
         var failedDateDetails: [FailedDateDetail] = []
 
         for date in dates {
+            // Check for cancellation before each date
+            if Task.isCancelled {
+                return ExportResult(
+                    successCount: successCount,
+                    totalCount: dates.count,
+                    failedDateDetails: failedDateDetails,
+                    wasCancelled: true
+                )
+            }
+
             do {
                 let healthData = try await healthKitManager.fetchHealthData(for: date)
 
