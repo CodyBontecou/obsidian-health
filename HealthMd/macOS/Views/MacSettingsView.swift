@@ -21,6 +21,9 @@ struct MacSettingsWindow: View {
 
             MacScheduleView()
                 .tabItem { Label("Schedule", systemImage: "clock") }
+
+            MacFeedbackTab()
+                .tabItem { Label("Feedback", systemImage: "envelope") }
         }
         .frame(width: 560, height: 480)
     }
@@ -187,6 +190,43 @@ struct MacDetailSettingsView: View {
                 Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
+            }
+
+            // MARK: Feedback
+            Section {
+                Button {
+                    FeedbackHelper.openMailClient()
+                } label: {
+                    HStack {
+                        Image(systemName: "envelope")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 20)
+                        Text("Send Feedback")
+                        Spacer()
+                        Image(systemName: "arrow.up.forward")
+                            .font(.caption)
+                            .foregroundStyle(Color.textMuted)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    FeedbackHelper.openGitHubIssue()
+                } label: {
+                    HStack {
+                        Image(systemName: "ladybug")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 20)
+                        Text("Report a Bug on GitHub")
+                        Spacer()
+                        Image(systemName: "arrow.up.forward")
+                            .font(.caption)
+                            .foregroundStyle(Color.textMuted)
+                    }
+                }
+                .buttonStyle(.plain)
+            } header: {
+                BrandLabel("Feedback")
             }
 
             // MARK: Reset
@@ -457,6 +497,105 @@ struct MacDataSettingsTab: View {
             MacMetricSelectionView(selectionState: advancedSettings.metricSelection)
                 .frame(minWidth: 500, minHeight: 500)
         }
+    }
+}
+
+// MARK: - Feedback Tab (for ⌘, window)
+
+struct MacFeedbackTab: View {
+    var body: some View {
+        Form {
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Have a question, idea, or ran into a problem?")
+                        .font(BrandTypography.bodyMedium())
+                        .foregroundStyle(Color.textPrimary)
+
+                    Text("Send an email or open a GitHub issue — both include your app version and system info automatically.")
+                        .font(BrandTypography.body())
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section {
+                Button {
+                    FeedbackHelper.openMailClient()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "envelope.fill")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 20)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Send Feedback")
+                                .font(BrandTypography.bodyMedium())
+                                .foregroundStyle(Color.textPrimary)
+                            Text("Opens your default email client")
+                                .font(BrandTypography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.up.forward")
+                            .font(.caption)
+                            .foregroundStyle(Color.textMuted)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    FeedbackHelper.openGitHubIssue()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "ladybug.fill")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 20)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Report a Bug on GitHub")
+                                .font(BrandTypography.bodyMedium())
+                                .foregroundStyle(Color.textPrimary)
+                            Text("Opens a pre-filled issue template")
+                                .font(BrandTypography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.up.forward")
+                            .font(.caption)
+                            .foregroundStyle(Color.textMuted)
+                    }
+                }
+                .buttonStyle(.plain)
+            } header: {
+                BrandLabel("Get in Touch")
+            }
+
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Diagnostics included automatically:")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
+
+                    Text(FeedbackHelper.diagnosticsBlock)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundStyle(Color.textSecondary)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.bgTertiary)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                        )
+                }
+                .padding(.vertical, 4)
+            } header: {
+                BrandLabel("What Gets Shared")
+            } footer: {
+                Text("No health data or personal information is included — only app version and system info.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 

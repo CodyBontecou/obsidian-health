@@ -566,62 +566,61 @@ struct SettingsTabView: View {
     @Binding var showFolderPicker: Bool
     @State private var showAdvancedSettings = false
     @State private var showSyncSettings = false
+    @State private var showMailCompose = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(spacing: Spacing.sm) {
-                Text("SETTINGS")
-                    .font(Typography.labelUppercase())
-                    .foregroundStyle(Color.textMuted)
-                    .tracking(3)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, Spacing.xl)
-            }
-
-            Spacer()
-
-            // Main content
-            VStack(spacing: Spacing.xl) {
-                // Settings icon with Liquid Glass container
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 56, weight: .medium))
-                    .foregroundStyle(Color.textMuted)
-                    .frame(width: 100, height: 100)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                    )
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                    )
-
+        ScrollView {
+            VStack(spacing: 0) {
+                // Header
                 VStack(spacing: Spacing.sm) {
-                    Text("CONFIGURE")
-                        .font(Typography.hero())
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.textPrimary)
+                    Text("SETTINGS")
+                        .font(Typography.labelUppercase())
+                        .foregroundStyle(Color.textMuted)
                         .tracking(3)
-
-                    Text("YOUR APP")
-                        .font(Typography.hero())
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.textPrimary)
-                        .tracking(3)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, Spacing.xl)
                 }
 
-                Text("Customize export format and data types")
-                    .font(Typography.bodyLarge())
-                    .foregroundStyle(Color.textSecondary)
-                    .padding(.top, Spacing.sm)
-            }
+                // Main content
+                VStack(spacing: Spacing.lg) {
+                    // Settings icon with Liquid Glass container
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 48, weight: .medium))
+                        .foregroundStyle(Color.textMuted)
+                        .frame(width: 84, height: 84)
+                        .background(
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                        )
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                        )
 
-            Spacer()
+                    VStack(spacing: Spacing.xs) {
+                        Text("CONFIGURE")
+                            .font(Typography.displayLarge())
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.textPrimary)
+                            .tracking(3)
 
-            // Settings options with Liquid Glass cards
-            VStack(spacing: Spacing.md) {
+                        Text("YOUR APP")
+                            .font(Typography.displayLarge())
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.textPrimary)
+                            .tracking(3)
+                    }
+
+                    Text("Customize export format and data types")
+                        .font(Typography.bodyLarge())
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .padding(.top, Spacing.lg)
+                .padding(.bottom, Spacing.xl)
+
+                // Settings options with Liquid Glass cards
+                VStack(spacing: Spacing.md) {
                 // Vault selection
                 SettingsRow(
                     icon: "folder.fill",
@@ -648,10 +647,36 @@ struct SettingsTabView: View {
                     isActive: UserDefaults.standard.bool(forKey: "syncEnabled"),
                     action: { showSyncSettings = true }
                 )
+
+                // Send Feedback
+                SettingsRow(
+                    icon: "envelope.fill",
+                    title: "Send Feedback",
+                    subtitle: "Questions, ideas, or issues",
+                    isActive: true,
+                    action: {
+                        if FeedbackHelper.canSendMail {
+                            showMailCompose = true
+                        } else if let url = FeedbackHelper.mailtoURL() {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                )
+
+                // Report Issue on GitHub
+                SettingsRow(
+                    icon: "ladybug.fill",
+                    title: "Report a Bug",
+                    subtitle: "Open an issue on GitHub",
+                    isActive: true,
+                    action: { FeedbackHelper.openGitHubIssue() }
+                )
             }
             .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, Spacing.xl)
+            .padding(.bottom, 120) // Clear nav bar
         }
+        }
+        .scrollIndicators(.hidden)
         .sheet(isPresented: $showAdvancedSettings) {
             AdvancedSettingsView(settings: advancedSettings)
         }
@@ -664,6 +689,9 @@ struct SettingsTabView: View {
                         }
                     }
             }
+        }
+        .sheet(isPresented: $showMailCompose) {
+            MailComposeView()
         }
     }
 }
