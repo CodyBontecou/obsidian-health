@@ -1,7 +1,7 @@
 #if os(macOS)
 import SwiftUI
 
-// MARK: - Schedule View
+// MARK: - Schedule View — Branded Form
 
 struct MacScheduleView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
@@ -18,13 +18,18 @@ struct MacScheduleView: View {
                         schedulingManager.schedule = s
                     }
                 ))
+                .tint(Color.accent)
+            } header: {
+                BrandLabel("Automation")
             } footer: {
                 Text("Health.md will automatically export your health data on the schedule below.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
             }
 
             // MARK: Schedule Configuration
             if schedulingManager.schedule.isEnabled {
-                Section("Configuration") {
+                Section {
                     Picker("Frequency", selection: Binding(
                         get: { schedulingManager.schedule.frequency },
                         set: { freq in
@@ -36,6 +41,7 @@ struct MacScheduleView: View {
                         Text("Daily").tag(ScheduleFrequency.daily)
                         Text("Weekly").tag(ScheduleFrequency.weekly)
                     }
+                    .tint(Color.accent)
 
                     DatePicker(
                         "Preferred Time",
@@ -56,6 +62,9 @@ struct MacScheduleView: View {
                         ),
                         displayedComponents: .hourAndMinute
                     )
+                    .tint(Color.accent)
+                } header: {
+                    BrandLabel("Configuration")
                 }
 
                 // MARK: Login Item
@@ -70,37 +79,45 @@ struct MacScheduleView: View {
                             }
                         }
                     ))
+                    .tint(Color.accent)
                 } header: {
-                    Text("Background")
+                    BrandLabel("Background")
                 } footer: {
                     Text("Health.md runs in the menu bar to perform scheduled exports. Enable \"Launch at Login\" so exports happen automatically when your Mac starts.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
                 }
 
                 // MARK: Status
-                Section("Status") {
+                Section {
                     if let lastExport = schedulingManager.schedule.lastExportDate {
                         LabeledContent("Last Export") {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(Color.success)
                                     .font(.caption)
                                 Text(lastExport, style: .relative)
-                                    .foregroundStyle(.secondary)
+                                    .font(BrandTypography.value())
+                                    .foregroundStyle(Color.textSecondary)
                             }
                         }
                     } else {
                         LabeledContent("Last Export") {
                             Text("Never")
-                                .foregroundStyle(.secondary)
+                                .font(BrandTypography.value())
+                                .foregroundStyle(Color.textMuted)
                         }
                     }
 
                     if let next = schedulingManager.getNextExportDescription() {
                         LabeledContent("Next Export") {
                             Text(next)
-                                .foregroundStyle(.secondary)
+                                .font(BrandTypography.value())
+                                .foregroundStyle(Color.textSecondary)
                         }
                     }
+                } header: {
+                    BrandLabel("Status")
                 }
             }
         }

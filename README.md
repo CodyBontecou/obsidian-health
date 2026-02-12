@@ -6,8 +6,21 @@ Health.md exports Apple Health data to your filesystem as human-readable Markdow
 
 ## What's Included
 
-- **iOS app** — Collects HealthKit metrics and exports to your device with configurable formats, filenames, and schedules.
-- **macOS app** — Same export engine running natively on Mac. Includes a menu bar widget, scheduled exports, and keyboard shortcuts. Health data syncs automatically via iCloud.
+- **iOS app** — Reads HealthKit data and exports to your device. Configurable formats, filenames, and scheduled exports.
+- **macOS app** — Companion app that receives health data from your iPhone over your local network (WiFi/Bluetooth), then exports to your Obsidian vault with the same engine. Includes a menu bar widget, scheduled exports, and keyboard shortcuts.
+
+## How It Works
+
+### iPhone → Mac Sync
+
+HealthKit data is **only available on iPhone** — macOS cannot read the Health store. Health.md solves this with **device-to-device sync** using Apple's Multipeer Connectivity framework:
+
+1. **iPhone** reads your health data from HealthKit
+2. **Mac** discovers your iPhone on the local network
+3. iPhone sends health data directly to Mac — **no cloud, no servers**
+4. Mac caches the data locally and exports to your Obsidian vault
+
+Both devices must be on the same WiFi network or within Bluetooth range. Sync is optional — the iOS app works fully standalone.
 
 ## Features
 
@@ -15,16 +28,19 @@ Health.md exports Apple Health data to your filesystem as human-readable Markdow
 - **HealthKit export** for sleep, activity, vitals, body measurements, nutrition, mindfulness, mobility, hearing, and workouts.
 - **Manual export** for a date range with progress and error handling.
 - **Scheduled exports** (daily or weekly) using Background Tasks + HealthKit background delivery.
+- **Mac sync** — optional companion sync sends health data to your Mac over the local network.
 - **Export history** with retry support for failed dates.
 - **Flexible formats**: Markdown, frontmatter-based Markdown, JSON, or CSV.
 - **Custom filename templates** (e.g. `{date}`, `{year}`, `{month}`, `{weekday}`).
 - **Folder picker** with optional subfolder organization.
 
 ### macOS
+- **iPhone companion sync** — discovers your iPhone and receives health data via Multipeer Connectivity.
+- **Local data cache** — health records stored as JSON in `~/Library/Application Support/Health.md/`.
 - **Same export engine** — all data categories, formats, and settings are shared with iOS.
-- **NavigationSplitView UI** — sidebar with Export, Schedule, History, and Settings sections.
-- **Menu bar widget** — persistent menu bar extra with status, "Export Yesterday" one-click button, and quick access to settings.
-- **Scheduled exports** — timer-based scheduling with Login Item support for automatic background exports.
+- **NavigationSplitView UI** — sidebar with Sync, Export, Schedule, History, and Settings sections.
+- **Menu bar widget** — persistent menu bar extra with sync status, "Export Yesterday" one-click button, and quick access to settings.
+- **Scheduled exports** — timer-based scheduling with Login Item support for automatic background exports (reads from local cache).
 - **Keyboard shortcuts** — ⌘E (export), ⌘, (settings), ⌘Q (quit).
 - **Settings window** (⌘,) — tabbed settings with General, Format, Data, and Schedule tabs.
 - **Native appearance** — respects system light/dark mode, uses standard macOS forms and controls.
@@ -39,7 +55,7 @@ Health.md exports Apple Health data to your filesystem as human-readable Markdow
 | **Vitals** | Respiratory rate, blood oxygen, body temperature, blood pressure, blood glucose |
 | **Body** | Weight, height, BMI, body fat %, lean body mass, waist circumference |
 | **Nutrition** | Calories, protein, carbs, fat, fiber, sugar, sodium, cholesterol, water, caffeine |
-| **Mindfulness** | Mindful sessions, State of Mind (iOS 18+ / macOS 15+) |
+| **Mindfulness** | Mindful sessions, State of Mind (iOS 18+) |
 | **Mobility** | Walking speed, step length, double support %, asymmetry, stair speed, 6-min walk |
 | **Hearing** | Headphone audio exposure, environmental sound levels |
 | **Workouts** | Type, duration, calories, distance (50+ workout types) |
@@ -87,6 +103,11 @@ vault/
 4. Choose your export folder (Files app, iCloud Drive, or any location).
 5. Export manually or configure scheduled exports.
 
+**Optional — Enable Mac Sync:**
+1. Go to Settings → Mac Sync.
+2. Toggle "Sync to Mac" on.
+3. Open Health.md on your Mac — it will discover your iPhone automatically.
+
 **Build from CLI:**
 ```bash
 xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -destination 'generic/platform=iOS' build
@@ -95,31 +116,31 @@ xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -destination 'generic/pl
 ### macOS
 
 **Requirements:**
-- **Apple Silicon Mac** (M1 or later) — HealthKit is not available on Intel Macs
 - **macOS 14 (Sonoma) or later**
-- **iCloud Health sync enabled** — Health data syncs from your iPhone/Apple Watch via iCloud
-- **Health app set up** on your Mac (launched at least once)
+- **iPhone running Health.md** with sync enabled (for health data)
 
 1. Open `HealthMd.xcodeproj` in Xcode.
 2. Select the **HealthMd-macOS** scheme.
-3. Configure signing (requires HealthKit entitlement).
-4. Build and run.
-5. Grant HealthKit permissions when prompted.
-6. Choose an export folder (e.g. your Obsidian vault in `~/Documents`).
+3. Configure signing and build.
+4. On first launch, the Sync tab shows "Searching for nearby iPhones…"
+5. On your iPhone, enable sync in Settings → Mac Sync.
+6. The Mac will auto-connect and you can request health data.
+7. Choose an export folder (e.g. your Obsidian vault in `~/Documents`).
 
 **Build from CLI:**
 ```bash
-xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -destination 'generic/platform=macOS' build -allowProvisioningUpdates
+xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -destination 'platform=macOS' build
 ```
 
 ### macOS Menu Bar & Scheduling
 
 Health.md lives in your menu bar for quick access:
 
-- Click the heart icon in the menu bar to see status and export yesterday's data with one click.
+- Click the heart icon in the menu bar to see sync status and export yesterday's data with one click.
 - Enable **scheduled exports** in the Schedule section (daily or weekly at your preferred time).
 - Enable **Launch at Login** so exports happen automatically when your Mac starts.
 - The app stays running in the menu bar even when you close the main window.
+- Scheduled exports read from the local data cache — sync your iPhone regularly for fresh data.
 
 ### macOS Keyboard Shortcuts
 
@@ -137,29 +158,45 @@ HealthMd/
 │   ├── Models/          # Data models (HealthData, HealthMetrics, settings)
 │   ├── Managers/        # HealthKitManager, VaultManager, ExportOrchestrator
 │   ├── Export/          # Markdown, JSON, CSV, Obsidian Bases exporters
+│   ├── Sync/            # SyncService (Multipeer Connectivity), SyncPayload
 │   └── Theme/           # DesignSystem with per-platform color mapping
 ├── iOS/                 # iOS-only (ContentView, SchedulingManager, Components)
-├── macOS/               # macOS-only (Views, SchedulingManager, FolderPicker)
+├── macOS/               # macOS-only (Views, SchedulingManager, HealthDataStore)
 ├── Assets.xcassets/     # Shared assets
 └── *.entitlements       # Per-platform entitlements
 ```
 
-The codebase uses `#if os(iOS)` / `#if os(macOS)` guards where platform behavior differs (HealthKit background delivery, security-scoped bookmarks, scheduling). All export logic, data models, and formatting code is fully shared.
+The codebase uses `#if os(iOS)` / `#if os(macOS)` guards where platform behavior differs. All export logic, data models, and formatting code is fully shared.
 
-## macOS-Specific Notes
+## Architecture Notes
 
-- **iCloud Health sync** must be enabled in System Settings → Apple ID → iCloud for health data to appear on your Mac. If you've never opened the Health app on your Mac, do so once to trigger the initial sync.
-- **Sync delay**: Health data recorded on iPhone/Apple Watch may take minutes to ~1 hour to appear on Mac via iCloud. Yesterday's data is typically fully synced by morning.
-- **Apple Silicon only**: HealthKit requires an Apple Silicon Mac (M1, M2, M3, etc.). Intel Macs will show a "HealthKit Not Available" message.
-- **Login Item**: When "Launch at Login" is enabled, Health.md registers as a Login Item via `SMAppService`. It launches silently in the menu bar on startup.
-- **Sandbox**: The macOS app runs in the App Sandbox. Export folders are accessed via security-scoped bookmarks that persist across app restarts.
+### Why not HealthKit on macOS?
+
+Apple's documentation states: *"The HealthKit framework is available on macOS 13 and later, but your app can't read or write HealthKit data. Calls to `isHealthDataAvailable()` return `false`."* The framework compiles but does nothing. Health.md works around this with device-to-device sync via Multipeer Connectivity.
+
+### Sync Protocol
+
+The sync protocol uses four message types:
+- `requestData(dates:)` — Mac requests specific dates from iPhone
+- `healthData(payload)` — iPhone sends health records to Mac
+- `ping` / `pong` — Connection keepalive
+
+Data is serialized as JSON and sent via `MCSession`. Payloads over 100KB use MC resource transfers for reliability.
+
+### macOS Data Flow
+
+```
+iPhone (HealthKit) → Multipeer Connectivity → macOS (HealthDataStore) → Export (VaultManager)
+```
+
+Health data is cached locally as one JSON file per date in `~/Library/Application Support/Health.md/`. The export engine reads from this cache — it never touches HealthKit directly on macOS.
 
 ## Scheduling Notes
 
-**iOS:** Scheduled exports use `BGTaskScheduler` + HealthKit background delivery. If the device is locked, health data may be protected; the app sends a notification prompting you to unlock and retry.
+**iOS:** Scheduled exports use `BGTaskScheduler` + HealthKit background delivery. If the device is locked, health data may be protected; the app sends a notification prompting you to unlock and retry. Auto-sync to Mac happens after each export if enabled.
 
-**macOS:** Scheduled exports use an in-app timer (30-minute check interval) combined with HealthKit observer queries. The app must be running (in the menu bar) for scheduled exports to work. Enable "Launch at Login" for reliability.
+**macOS:** Scheduled exports use an in-app timer (30-minute check interval). The app must be running (in the menu bar) for scheduled exports to work. Enable "Launch at Login" for reliability. Exports read from the local data cache — make sure to sync from your iPhone regularly.
 
 ## Privacy
 
-All exports are written locally to your chosen folder. No health data is sent to external services.
+All data transfer happens over your local network using Multipeer Connectivity (WiFi + Bluetooth). No health data is sent to external services or cloud storage. Exports are written locally to your chosen folder.

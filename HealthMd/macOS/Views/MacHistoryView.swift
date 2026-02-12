@@ -1,7 +1,7 @@
 #if os(macOS)
 import SwiftUI
 
-// MARK: - History View
+// MARK: - History View — Branded
 
 struct MacHistoryView: View {
     @ObservedObject private var historyManager = ExportHistoryManager.shared
@@ -23,11 +23,17 @@ struct MacHistoryView: View {
     var body: some View {
         Group {
             if historyManager.history.isEmpty {
-                ContentUnavailableView(
-                    "No Export History",
-                    systemImage: "list.bullet.clipboard",
-                    description: Text("Export history will appear here after your first export.")
-                )
+                VStack(spacing: 16) {
+                    Image(systemName: "list.bullet.clipboard")
+                        .font(.system(size: 40))
+                        .foregroundStyle(Color.textMuted)
+                    Text("No Export History")
+                        .font(BrandTypography.subheading())
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Export history will appear here after your first export.")
+                        .font(BrandTypography.body())
+                        .foregroundStyle(Color.textMuted)
+                }
             } else {
                 HSplitView {
                     historyList
@@ -46,6 +52,7 @@ struct MacHistoryView: View {
                         selectedEntry = nil
                         historyManager.clearHistory()
                     }
+                    .tint(Color.error)
                 }
             }
         }
@@ -56,18 +63,18 @@ struct MacHistoryView: View {
     private var historyList: some View {
         List(historyManager.history, selection: $selectedEntry) { entry in
             HStack(spacing: 10) {
-                // Status icon
                 statusIcon(for: entry)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.summaryDescription)
-                        .font(.body)
+                        .font(BrandTypography.bodyMedium())
+                        .foregroundStyle(Color.textPrimary)
                         .lineLimit(1)
 
                     HStack(spacing: 8) {
                         Text(Self.dateFormatter.string(from: entry.timestamp))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(Color.textMuted)
 
                         sourceBadge(for: entry)
                     }
@@ -75,11 +82,9 @@ struct MacHistoryView: View {
 
                 Spacer()
 
-                // File count
                 Text("\(entry.successCount)/\(entry.totalCount)")
-                    .font(.caption)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                    .font(BrandTypography.value())
+                    .foregroundStyle(Color.textMuted)
             }
             .padding(.vertical, 2)
             .tag(entry)
@@ -92,66 +97,77 @@ struct MacHistoryView: View {
     private var detailPanel: some View {
         if let entry = selectedEntry {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 20) {
                     // Status header
-                    HStack {
+                    HStack(spacing: 8) {
                         statusIcon(for: entry)
                         Text(entry.isFullSuccess ? "Success" : entry.success ? "Partial" : "Failed")
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                            .font(BrandTypography.heading())
+                            .foregroundStyle(Color.textPrimary)
                     }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .brandGlassCard()
 
-                    Divider()
+                    // Details card
+                    VStack(alignment: .leading, spacing: 12) {
+                        BrandLabel("Details")
 
-                    // Details
-                    detailRow("Timestamp", value: Self.dateFormatter.string(from: entry.timestamp))
-                    detailRow("Source", value: entry.source.rawValue)
-                    detailRow("Date Range", value: dateRangeString(entry))
-                    detailRow("Files Exported", value: "\(entry.successCount) of \(entry.totalCount)")
+                        BrandDataRow(label: "Timestamp", value: Self.dateFormatter.string(from: entry.timestamp))
+                        BrandDataRow(label: "Source", value: entry.source.rawValue)
+                        BrandDataRow(label: "Date Range", value: dateRangeString(entry))
+                        BrandDataRow(label: "Files Exported", value: "\(entry.successCount) of \(entry.totalCount)")
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .brandGlassCard()
 
                     if let reason = entry.failureReason {
-                        Divider()
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Failure Reason")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 8) {
+                            BrandLabel("Failure Reason")
                             Text(reason.detailedDescription)
-                                .font(.callout)
+                                .font(BrandTypography.body())
+                                .foregroundStyle(Color.textSecondary)
                         }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .brandGlassCard(tintOpacity: 0.02)
                     }
 
                     if !entry.failedDateDetails.isEmpty {
-                        Divider()
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Failed Dates")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 10) {
+                            BrandLabel("Failed Dates")
                             ForEach(entry.failedDateDetails, id: \.dateString) { detail in
-                                HStack {
+                                HStack(spacing: 6) {
                                     Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.red)
+                                        .foregroundStyle(Color.error)
                                         .font(.caption)
                                     Text(detail.dateString)
-                                        .font(.callout)
-                                        .monospacedDigit()
+                                        .font(BrandTypography.value())
+                                        .foregroundStyle(Color.textPrimary)
                                     Text("— \(detail.reason.shortDescription)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .font(BrandTypography.caption())
+                                        .foregroundStyle(Color.textMuted)
                                 }
                             }
                         }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .brandGlassCard(tintOpacity: 0.02)
                     }
 
                     Spacer()
                 }
-                .padding()
+                .padding(16)
             }
         } else {
-            VStack {
-                Spacer()
+            VStack(spacing: 12) {
+                Image(systemName: "doc.text.magnifyingglass")
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color.textMuted)
                 Text("Select an export to see details")
-                    .foregroundStyle(.secondary)
-                Spacer()
+                    .font(BrandTypography.body())
+                    .foregroundStyle(Color.textMuted)
             }
         }
     }
@@ -163,27 +179,17 @@ struct MacHistoryView: View {
         Image(systemName: entry.isFullSuccess
               ? "checkmark.circle.fill"
               : entry.success ? "exclamationmark.circle.fill" : "xmark.circle.fill")
-            .foregroundStyle(entry.isFullSuccess ? .green : entry.success ? .orange : .red)
+            .foregroundStyle(entry.isFullSuccess ? Color.success : entry.success ? Color.warning : Color.error)
     }
 
     @ViewBuilder
     private func sourceBadge(for entry: ExportHistoryEntry) -> some View {
         Text(entry.source.rawValue)
-            .font(.caption2)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 1)
-            .background(.quaternary, in: Capsule())
-    }
-
-    @ViewBuilder
-    private func detailRow(_ label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.callout)
-        }
+            .font(BrandTypography.caption())
+            .foregroundStyle(Color.textMuted)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .brandGlassPill()
     }
 
     private func dateRangeString(_ entry: ExportHistoryEntry) -> String {

@@ -18,6 +18,8 @@
 				Info.plist,
 				"macOS/FolderPicker+macOS.swift",
 				"macOS/HealthMdApp+macOS.swift",
+				macOS/Info.plist,
+				macOS/Managers/HealthDataStore.swift,
 				"macOS/SchedulingManager+macOS.swift",
 				macOS/Views/MacContentView.swift,
 				macOS/Views/MacExportView.swift,
@@ -26,6 +28,7 @@
 				macOS/Views/MacMetricSelectionView.swift,
 				macOS/Views/MacScheduleView.swift,
 				macOS/Views/MacSettingsView.swift,
+				macOS/Views/MacSyncView.swift,
 				macOS/Views/MacVaultFolderSection.swift,
 			);
 			target = 624B99EE2F15D70300F9103F /* HealthMd */;
@@ -49,6 +52,8 @@
 				iOS/Views/IndividualTrackingView.swift,
 				iOS/Views/MetricSelectionView.swift,
 				iOS/Views/ScheduleSettingsView.swift,
+				iOS/Views/SyncSettingsView.swift,
+				macOS/Info.plist,
 			);
 			target = 62CC00052F15D70300F9103F /* HealthMd-macOS */;
 		};
@@ -420,6 +425,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -427,9 +433,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HealthMd/macOS/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "Health.md reads your health data to export it to your Obsidian vault.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Health.md may need to update health data metadata as part of the export process.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -438,6 +443,7 @@
 				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.macos;
 				PRODUCT_NAME = Health.md;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -454,6 +460,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "HealthMd/HealthMd-macOS.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -461,9 +468,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HealthMd/macOS/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "Health.md reads your health data to export it to your Obsidian vault.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Health.md may need to update health data metadata as part of the export process.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -472,6 +478,7 @@
 				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth.macos;
 				PRODUCT_NAME = Health.md;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

@@ -4,21 +4,24 @@ import SwiftUI
 // MARK: - Main macOS Window
 
 struct MacContentView: View {
-    @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var advancedSettings: AdvancedExportSettings
+    @EnvironmentObject var syncService: SyncService
+    @EnvironmentObject var healthDataStore: HealthDataStore
 
     enum SidebarItem: String, CaseIterable, Identifiable {
+        case sync = "Sync"
         case export = "Export"
         case schedule = "Schedule"
         case history = "History"
         case settings = "Settings"
 
-        var id: String { rawValue }
+        var id: Self { self }
 
         var icon: String {
             switch self {
+            case .sync:     return "arrow.triangle.2.circlepath"
             case .export:   return "arrow.up.doc"
             case .schedule: return "clock"
             case .history:  return "list.bullet.clipboard"
@@ -27,35 +30,65 @@ struct MacContentView: View {
         }
     }
 
-    @State private var selectedItem: SidebarItem? = .export
+    @State private var selectedItem: SidebarItem? = .sync
 
     var body: some View {
-        Group {
-            if !healthKitManager.isHealthDataAvailable {
-                healthKitUnavailableView
-            } else {
-                mainContent
-            }
-        }
-        .task {
-            if healthKitManager.isHealthDataAvailable && !healthKitManager.isAuthorized {
-                try? await healthKitManager.requestAuthorization()
-            }
-        }
-    }
-
-    // MARK: - Main Content
-
-    private var mainContent: some View {
         NavigationSplitView {
-            List(SidebarItem.allCases, selection: $selectedItem) { item in
-                Label(item.rawValue, systemImage: item.icon)
+            VStack(spacing: 0) {
+                // Brand header
+                HStack(spacing: 8) {
+                    Image(systemName: "heart.text.square.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.accent)
+                    Text("health.md")
+                        .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.textPrimary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 10)
+
+                // Sidebar navigation
+                List(SidebarItem.allCases, selection: $selectedItem) { item in
+                    Label {
+                        Text(item.rawValue)
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    } icon: {
+                        Image(systemName: item.icon)
+                            .foregroundStyle(Color.accent)
+                    }
                     .tag(item)
+                }
+                .listStyle(.sidebar)
+
+                // Connection status footer
+                Divider()
+                    .opacity(0.3)
+
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(syncService.connectionState == .connected ? Color.success : Color.textMuted)
+                        .frame(width: 6, height: 6)
+                    Text(sidebarStatusLabel)
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
+                    Spacer()
+                    if healthDataStore.recordCount > 0 {
+                        Text("\(healthDataStore.recordCount)d")
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(Color.accent.opacity(0.7))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         } detail: {
             Group {
                 switch selectedItem {
+                case .sync:
+                    MacSyncView()
                 case .export:
                     MacExportView()
                 case .schedule:
@@ -65,59 +98,37 @@ struct MacContentView: View {
                 case .settings:
                     MacDetailSettingsView()
                 case .none:
-                    ContentUnavailableView(
-                        "Health.md",
-                        systemImage: "heart.text.square",
-                        description: Text("Select a section from the sidebar.")
-                    )
+                    brandPlaceholder
                 }
             }
         }
     }
 
-    // MARK: - HealthKit Unavailable
+    // MARK: - Helpers
 
-    private var healthKitUnavailableView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Image(systemName: "heart.slash")
-                .font(.system(size: 56))
-                .foregroundStyle(.secondary)
-
-            Text("HealthKit Not Available")
-                .font(.title)
-                .fontWeight(.semibold)
-
-            VStack(spacing: 12) {
-                Text("Health.md requires Apple Health, which is only available on Apple Silicon Macs running macOS 14 or later.")
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-
-                Text("Make sure:")
-                    .fontWeight(.medium)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("You're using an Apple Silicon Mac (M1 or later)", systemImage: "cpu")
-                    Label("macOS 14 (Sonoma) or later is installed", systemImage: "desktopcomputer")
-                    Label("The Health app is set up on this Mac", systemImage: "heart.text.square")
-                    Label("iCloud Health sync is enabled in System Settings", systemImage: "icloud")
-                }
-                .foregroundStyle(.secondary)
-                .font(.callout)
-            }
-            .frame(maxWidth: 460)
-
-            Button("Open System Settings") {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preferences") {
-                    NSWorkspace.shared.open(url)
-                }
-            }
-            .buttonStyle(.bordered)
-
-            Spacer()
+    private var sidebarStatusLabel: String {
+        switch syncService.connectionState {
+        case .connected:
+            return syncService.connectedPeerName ?? "Connected"
+        case .connecting:
+            return "Connecting…"
+        case .disconnected:
+            return "No iPhone"
         }
-        .padding(40)
+    }
+
+    private var brandPlaceholder: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "heart.text.square")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.accent)
+            Text("health.md")
+                .font(BrandTypography.heading())
+                .foregroundStyle(Color.textPrimary)
+            Text("Select a section from the sidebar")
+                .font(BrandTypography.body())
+                .foregroundStyle(Color.textMuted)
+        }
     }
 }
 

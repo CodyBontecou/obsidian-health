@@ -1,10 +1,9 @@
 #if os(macOS)
 import SwiftUI
 
-// MARK: - Settings Window (⌘,)
+// MARK: - Settings Window (⌘,) — Branded
 
 struct MacSettingsWindow: View {
-    @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var advancedSettings: AdvancedExportSettings
@@ -39,127 +38,155 @@ struct MacDetailSettingsView: View {
             MacVaultFolderSection(showClearButton: true)
 
             // MARK: Export Format
-            Section("Export Format") {
+            Section {
                 Picker("Format", selection: $advancedSettings.exportFormat) {
                     ForEach(ExportFormat.allCases, id: \.self) { format in
                         Text(format.rawValue).tag(format)
                     }
                 }
+                .tint(Color.accent)
 
                 Picker("Write Mode", selection: $advancedSettings.writeMode) {
                     ForEach(WriteMode.allCases, id: \.self) { mode in
                         Text(mode.rawValue).tag(mode)
                     }
                 }
+                .tint(Color.accent)
 
                 if advancedSettings.exportFormat == .markdown {
                     Toggle("Include Frontmatter Metadata", isOn: $advancedSettings.includeMetadata)
+                        .tint(Color.accent)
                     Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
+                        .tint(Color.accent)
                 }
+            } header: {
+                BrandLabel("Export Format")
             }
 
             // MARK: File Naming
-            Section("File Naming") {
+            Section {
                 LabeledContent("Filename Pattern") {
                     TextField("{date}", text: $advancedSettings.filenameFormat)
+                        .font(.system(size: 13, design: .monospaced))
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 LabeledContent("Folder Structure") {
                     TextField("e.g. {year}/{month}", text: $advancedSettings.folderStructure)
+                        .font(.system(size: 13, design: .monospaced))
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
 
                 LabeledContent("Preview") {
                     let filename = advancedSettings.formatFilename(for: Date())
                     let ext = advancedSettings.exportFormat.fileExtension
                     if let folder = advancedSettings.formatFolderPath(for: Date()) {
                         Text("\(folder)/\(filename).\(ext)")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                            .font(BrandTypography.detail())
+                            .foregroundStyle(Color.accent)
                     } else {
                         Text("\(filename).\(ext)")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                            .font(BrandTypography.detail())
+                            .foregroundStyle(Color.accent)
                     }
                 }
+            } header: {
+                BrandLabel("File Naming")
             }
 
             // MARK: Format Customization
-            Section("Format Customization") {
+            Section {
                 Picker("Date Format", selection: $advancedSettings.formatCustomization.dateFormat) {
                     ForEach(DateFormatPreference.allCases, id: \.self) { format in
                         Text(format.displayName).tag(format)
                     }
                 }
+                .tint(Color.accent)
 
                 Picker("Time Format", selection: $advancedSettings.formatCustomization.timeFormat) {
                     ForEach(TimeFormatPreference.allCases, id: \.self) { format in
                         Text(format.displayName).tag(format)
                     }
                 }
+                .tint(Color.accent)
 
                 Picker("Unit System", selection: $advancedSettings.formatCustomization.unitPreference) {
                     ForEach(UnitPreference.allCases, id: \.self) { unit in
                         Text(unit.displayName).tag(unit)
                     }
                 }
+                .tint(Color.accent)
+            } header: {
+                BrandLabel("Format Customization")
             }
 
             // MARK: Markdown Template
             if advancedSettings.exportFormat == .markdown {
-                Section("Markdown Template") {
+                Section {
                     Picker("Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
                         ForEach(MarkdownTemplateStyle.allCases, id: \.self) { style in
                             Text(style.displayName).tag(style)
                         }
                     }
+                    .tint(Color.accent)
 
                     Picker("Header Level", selection: $advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel) {
                         Text("# H1").tag(1)
                         Text("## H2").tag(2)
                         Text("### H3").tag(3)
                     }
+                    .tint(Color.accent)
 
                     Picker("Bullet Style", selection: $advancedSettings.formatCustomization.markdownTemplate.bulletStyle) {
                         ForEach(MarkdownTemplateConfig.BulletStyle.allCases, id: \.self) { style in
                             Text(style.displayName).tag(style)
                         }
                     }
+                    .tint(Color.accent)
 
                     Toggle("Use Emoji in Headers", isOn: $advancedSettings.formatCustomization.markdownTemplate.useEmoji)
+                        .tint(Color.accent)
                     Toggle("Include Summary", isOn: $advancedSettings.formatCustomization.markdownTemplate.includeSummary)
+                        .tint(Color.accent)
+                } header: {
+                    BrandLabel("Markdown Template")
                 }
             }
 
             // MARK: Individual Tracking
             Section {
                 Toggle("Enable individual entries", isOn: $advancedSettings.individualTracking.globalEnabled)
+                    .tint(Color.accent)
 
                 if advancedSettings.individualTracking.globalEnabled {
                     LabeledContent("Entries Folder") {
                         TextField("entries", text: $advancedSettings.individualTracking.entriesFolder)
+                            .font(.system(size: 13, design: .monospaced))
                             .frame(width: 200)
                             .textFieldStyle(.roundedBorder)
                     }
 
                     Toggle("Organize by Category", isOn: $advancedSettings.individualTracking.useCategoryFolders)
+                        .tint(Color.accent)
 
                     LabeledContent("Tracked Metrics") {
                         Text("\(advancedSettings.individualTracking.totalEnabledCount)")
-                            .foregroundStyle(.secondary)
+                            .font(BrandTypography.value())
+                            .foregroundStyle(Color.accent)
                     }
                 }
             } header: {
-                Text("Individual Entry Tracking")
+                BrandLabel("Individual Entry Tracking")
             } footer: {
                 Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
             }
 
             // MARK: Reset
@@ -167,7 +194,7 @@ struct MacDetailSettingsView: View {
                 Button("Reset All Settings to Defaults", role: .destructive) {
                     advancedSettings.reset()
                 }
-                .foregroundStyle(.red)
+                .tint(Color.error)
             }
         }
         .formStyle(.grouped)
@@ -179,23 +206,42 @@ struct MacDetailSettingsView: View {
 
 struct MacGeneralSettingsTab: View {
     @EnvironmentObject var vaultManager: VaultManager
-    @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var syncService: SyncService
+    @EnvironmentObject var healthDataStore: HealthDataStore
 
     var body: some View {
         Form {
-            Section("Health Connection") {
-                HStack {
+            Section {
+                HStack(spacing: 8) {
                     Circle()
-                        .fill(healthKitManager.isAuthorized ? .green : .secondary)
+                        .fill(syncService.connectionState == .connected ? Color.success : Color.textMuted)
                         .frame(width: 8, height: 8)
-                    Text(healthKitManager.isAuthorized ? "Connected to Apple Health" : "Not Connected")
+                    Text(syncService.connectionState == .connected
+                         ? "Connected to \(syncService.connectedPeerName ?? "iPhone")"
+                         : "Not Connected")
+                        .font(BrandTypography.bodyMedium())
                     Spacer()
-                    if !healthKitManager.isAuthorized {
-                        Button("Authorize…") {
-                            Task { try? await healthKitManager.requestAuthorization() }
-                        }
+                }
+
+                HStack {
+                    Text("Synced Records")
+                    Spacer()
+                    Text("\(healthDataStore.recordCount)")
+                        .font(BrandTypography.value())
+                        .foregroundStyle(Color.accent)
+                }
+
+                if let lastSync = healthDataStore.lastSyncDate {
+                    HStack {
+                        Text("Last Sync")
+                        Spacer()
+                        Text(lastSync, style: .relative)
+                            .font(BrandTypography.value())
+                            .foregroundStyle(Color.textSecondary)
                     }
                 }
+            } header: {
+                BrandLabel("iPhone Sync")
             }
 
             MacVaultFolderSection()
@@ -209,85 +255,107 @@ struct MacFormatSettingsTab: View {
 
     var body: some View {
         Form {
-            Section("Export Format") {
+            Section {
                 Picker("Format", selection: $advancedSettings.exportFormat) {
                     ForEach(ExportFormat.allCases, id: \.self) { format in
                         Text(format.rawValue).tag(format)
                     }
                 }
+                .tint(Color.accent)
 
                 Picker("Write Mode", selection: $advancedSettings.writeMode) {
                     ForEach(WriteMode.allCases, id: \.self) { mode in
                         Text(mode.rawValue).tag(mode)
                     }
                 }
+                .tint(Color.accent)
 
                 if advancedSettings.exportFormat == .markdown {
                     Toggle("Include Frontmatter", isOn: $advancedSettings.includeMetadata)
+                        .tint(Color.accent)
                     Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
+                        .tint(Color.accent)
                 }
+            } header: {
+                BrandLabel("Export Format")
             }
 
-            Section("File Naming") {
+            Section {
                 LabeledContent("Filename") {
                     TextField("{date}", text: $advancedSettings.filenameFormat)
+                        .font(.system(size: 13, design: .monospaced))
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 LabeledContent("Subfolder Pattern") {
                     TextField("e.g. {year}/{month}", text: $advancedSettings.folderStructure)
+                        .font(.system(size: 13, design: .monospaced))
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+            } header: {
+                BrandLabel("File Naming")
             }
 
-            Section("Display Formats") {
+            Section {
                 Picker("Date Format", selection: $advancedSettings.formatCustomization.dateFormat) {
                     ForEach(DateFormatPreference.allCases, id: \.self) { f in
                         Text(f.displayName).tag(f)
                     }
                 }
+                .tint(Color.accent)
 
                 Picker("Time Format", selection: $advancedSettings.formatCustomization.timeFormat) {
                     ForEach(TimeFormatPreference.allCases, id: \.self) { f in
                         Text(f.displayName).tag(f)
                     }
                 }
+                .tint(Color.accent)
 
                 Picker("Units", selection: $advancedSettings.formatCustomization.unitPreference) {
                     ForEach(UnitPreference.allCases, id: \.self) { u in
                         Text(u.displayName).tag(u)
                     }
                 }
+                .tint(Color.accent)
+            } header: {
+                BrandLabel("Display Formats")
             }
 
             if advancedSettings.exportFormat == .markdown {
-                Section("Markdown Template") {
+                Section {
                     Picker("Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
                         ForEach(MarkdownTemplateStyle.allCases, id: \.self) { s in
                             Text(s.displayName).tag(s)
                         }
                     }
+                    .tint(Color.accent)
 
                     Picker("Header Level", selection: $advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel) {
                         Text("# H1").tag(1)
                         Text("## H2").tag(2)
                         Text("### H3").tag(3)
                     }
+                    .tint(Color.accent)
 
                     Picker("Bullet Style", selection: $advancedSettings.formatCustomization.markdownTemplate.bulletStyle) {
                         ForEach(MarkdownTemplateConfig.BulletStyle.allCases, id: \.self) { s in
                             Text(s.displayName).tag(s)
                         }
                     }
+                    .tint(Color.accent)
 
                     Toggle("Emoji in Headers", isOn: $advancedSettings.formatCustomization.markdownTemplate.useEmoji)
+                        .tint(Color.accent)
                     Toggle("Include Summary", isOn: $advancedSettings.formatCustomization.markdownTemplate.includeSummary)
+                        .tint(Color.accent)
+                } header: {
+                    BrandLabel("Markdown Template")
                 }
             }
         }
@@ -301,13 +369,14 @@ struct MacDataSettingsTab: View {
 
     var body: some View {
         Form {
-            Section("Health Metrics") {
+            Section {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Selected Metrics")
+                            .font(BrandTypography.bodyMedium())
                         Text("\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) enabled")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(Color.textMuted)
                     }
                     Spacer()
                     ProgressView(
@@ -315,45 +384,51 @@ struct MacDataSettingsTab: View {
                         total: Double(advancedSettings.metricSelection.totalMetricCount)
                     )
                     .frame(width: 100)
+                    .tint(Color.accent)
                     Button("Configure…") {
                         showMetricSelection = true
                     }
+                    .tint(Color.accent)
                 }
 
-                // Quick category toggles
                 ForEach(HealthMetricCategory.allCases, id: \.self) { category in
                     let enabled = advancedSettings.metricSelection.enabledMetricCount(for: category)
                     let total = advancedSettings.metricSelection.totalMetricCount(for: category)
 
                     HStack {
                         Image(systemName: category.icon)
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(Color.accent)
                             .frame(width: 20)
                         Text(category.rawValue)
                         Spacer()
                         Text("\(enabled)/\(total)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
+                            .font(BrandTypography.value())
+                            .foregroundStyle(Color.textMuted)
                     }
                 }
+            } header: {
+                BrandLabel("Health Metrics")
             }
 
             Section {
                 Toggle("Enable individual entries", isOn: $advancedSettings.individualTracking.globalEnabled)
+                    .tint(Color.accent)
 
                 if advancedSettings.individualTracking.globalEnabled {
                     LabeledContent("Entries Folder") {
                         TextField("entries", text: $advancedSettings.individualTracking.entriesFolder)
+                            .font(.system(size: 13, design: .monospaced))
                             .frame(width: 200)
                             .textFieldStyle(.roundedBorder)
                     }
 
                     Toggle("Organize by Category", isOn: $advancedSettings.individualTracking.useCategoryFolders)
+                        .tint(Color.accent)
 
                     LabeledContent("Tracked") {
                         Text("\(advancedSettings.individualTracking.totalEnabledCount) metrics")
-                            .foregroundStyle(.secondary)
+                            .font(BrandTypography.value())
+                            .foregroundStyle(Color.accent)
                     }
 
                     HStack {
@@ -361,6 +436,7 @@ struct MacDataSettingsTab: View {
                             advancedSettings.individualTracking.enableSuggested()
                         }
                         .buttonStyle(.bordered)
+                        .tint(Color.accent)
 
                         Button("Disable All") {
                             advancedSettings.individualTracking.disableAll()
@@ -369,9 +445,11 @@ struct MacDataSettingsTab: View {
                     }
                 }
             } header: {
-                Text("Individual Entry Tracking")
+                BrandLabel("Individual Entry Tracking")
             } footer: {
                 Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
             }
         }
         .formStyle(.grouped)

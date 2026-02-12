@@ -34,6 +34,13 @@
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<true/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Health.md uses your local network to sync health data between your iPhone and Mac.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_healthmd-sync._tcp</string>
+		<string>_healthmd-sync._udp</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

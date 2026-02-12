@@ -31,26 +31,28 @@ extension Color {
     static let error = Color(hex: "C74545")          // Muted red
     static let warning = Color(hex: "D4A958")        // Muted amber
     #elseif os(macOS)
-    // macOS: Map to system colors so the app respects light/dark mode
-    static let bgPrimary = Color(nsColor: .windowBackgroundColor)
-    static let bgSecondary = Color(nsColor: .controlBackgroundColor)
-    static let bgTertiary = Color(nsColor: .underPageBackgroundColor)
+    // macOS: HealthMD brand — dark palette with warm purple accent
+    // Derived from healthmd.isolated.tech brand identity
+    static let bgPrimary = Color(hex: "0f0c0e")       // Deep warm black
+    static let bgSecondary = Color(hex: "171316")      // Slightly elevated
+    static let bgTertiary = Color(hex: "211b1f")       // Cards / surfaces
 
-    static let borderSubtle = Color(nsColor: .separatorColor)
-    static let borderDefault = Color(nsColor: .separatorColor)
-    static let borderStrong = Color(nsColor: .tertiaryLabelColor)
+    static let borderSubtle = Color(hex: "2d2429")     // Warm dark border
+    static let borderDefault = Color(hex: "3a2f36")    // Standard border
+    static let borderStrong = Color(hex: "4a3d45")     // Focused / hover
 
-    static let textPrimary = Color(nsColor: .labelColor)
-    static let textSecondary = Color(nsColor: .secondaryLabelColor)
-    static let textMuted = Color(nsColor: .tertiaryLabelColor)
+    static let textPrimary = Color(hex: "f6f1f3")      // Warm off-white
+    static let textSecondary = Color(hex: "c9c0c5")    // Secondary copy
+    static let textMuted = Color(hex: "8e8188")         // Muted / disabled
 
-    static let accent = Color.accentColor
-    static let accentHover = Color.accentColor.opacity(0.8)
-    static let accentSubtle = Color.accentColor.opacity(0.15)
+    // Signature purple — matches website --accent: #7A57A7
+    static let accent = Color(hex: "7A57A7")
+    static let accentHover = Color(hex: "9B6DD7")
+    static let accentSubtle = Color(hex: "7A57A7").opacity(0.15)
 
-    static let success = Color.green
-    static let error = Color.red
-    static let warning = Color.orange
+    static let success = Color(hex: "4A9B6D")
+    static let error = Color(hex: "C74545")
+    static let warning = Color(hex: "D4A958")
     #endif
 
     init(hex: String) {
@@ -257,3 +259,147 @@ extension View {
         self // Return self without stagger
     }
 }
+
+// MARK: - macOS Brand Components (Liquid Glass + HealthMD identity)
+
+#if os(macOS)
+
+/// Uppercase purple monospace label — matches website section headers
+/// e.g. "HOW IT WORKS", "CAPABILITIES", "PRIVACY FIRST"
+struct BrandLabel: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(size: 11, weight: .medium, design: .monospaced))
+            .foregroundStyle(Color.accent)
+            .kerning(2.2)
+    }
+}
+
+/// Glass card with optional purple tint — primary content container
+struct BrandGlassCardModifier: ViewModifier {
+    var cornerRadius: CGFloat = 16
+    var tintOpacity: Double = 0.06
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular.tint(Color.accent.opacity(tintOpacity)),
+                    in: .rect(cornerRadius: cornerRadius)
+                )
+        } else {
+            content
+                .background(Color.bgTertiary)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                )
+        }
+    }
+}
+
+/// Glass capsule for status pills and badges
+struct BrandGlassPillModifier: ViewModifier {
+    var tintColor: Color = .clear
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular.tint(tintColor.opacity(0.15)),
+                    in: .capsule
+                )
+        } else {
+            content
+                .background(Color.bgTertiary)
+                .clipShape(Capsule())
+                .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+        }
+    }
+}
+
+/// Interactive glass button — press-responsive with purple tint
+struct BrandGlassButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular.tint(Color.accent.opacity(0.12)).interactive(),
+                    in: .capsule
+                )
+        } else {
+            content
+                .background(Color.accent.opacity(0.15))
+                .clipShape(Capsule())
+        }
+    }
+}
+
+extension View {
+    /// Apply a branded glass card container
+    func brandGlassCard(cornerRadius: CGFloat = 16, tintOpacity: Double = 0.06) -> some View {
+        modifier(BrandGlassCardModifier(cornerRadius: cornerRadius, tintOpacity: tintOpacity))
+    }
+
+    /// Apply a branded glass capsule (for pills / badges)
+    func brandGlassPill(tint: Color = .clear) -> some View {
+        modifier(BrandGlassPillModifier(tintColor: tint))
+    }
+
+    /// Apply an interactive branded glass button treatment
+    func brandGlassButton() -> some View {
+        modifier(BrandGlassButtonModifier())
+    }
+}
+
+/// Monospace brand typography for macOS — matches JetBrains Mono from website
+struct BrandTypography {
+    static func sectionLabel() -> Font {
+        .system(size: 11, weight: .medium, design: .monospaced)
+    }
+    static func heading() -> Font {
+        .system(size: 22, weight: .semibold, design: .monospaced)
+    }
+    static func subheading() -> Font {
+        .system(size: 15, weight: .medium, design: .monospaced)
+    }
+    static func body() -> Font {
+        .system(size: 13, weight: .regular, design: .monospaced)
+    }
+    static func bodyMedium() -> Font {
+        .system(size: 13, weight: .medium, design: .monospaced)
+    }
+    static func detail() -> Font {
+        .system(size: 12, weight: .regular, design: .monospaced)
+    }
+    static func value() -> Font {
+        .system(size: 13, weight: .medium, design: .monospaced)
+    }
+    static func caption() -> Font {
+        .system(size: 11, weight: .regular, design: .monospaced)
+    }
+}
+
+/// Branded data row — label on left, value on right, monospace
+struct BrandDataRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(BrandTypography.body())
+                .foregroundStyle(Color.textSecondary)
+            Spacer()
+            Text(value)
+                .font(BrandTypography.value())
+                .foregroundStyle(Color.textPrimary)
+        }
+    }
+}
+
+#endif

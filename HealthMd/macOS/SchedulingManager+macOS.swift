@@ -7,6 +7,9 @@ import os.log
 
 /// macOS SchedulingManager — uses in-app Timer + Login Item instead of BGTaskScheduler.
 /// The app persists in the menu bar, so a simple timer checks hourly whether an export is due.
+///
+/// On macOS, scheduled exports read from HealthDataStore (local cache synced from iPhone)
+/// rather than HealthKit (which doesn't work on macOS).
 @MainActor
 class SchedulingManager: ObservableObject {
     static let shared = SchedulingManager()
@@ -41,19 +44,8 @@ class SchedulingManager: ObservableObject {
 
         guard schedule.isEnabled else {
             logger.info("Schedule disabled, timer cancelled")
-            // Also set up HealthKit observer queries off
-            HealthKitManager.shared.stopObserverQueries()
-            HealthKitManager.shared.stopPollingTimer()
             return
         }
-
-        // Set up HealthKit observer queries + polling
-        let hkm = HealthKitManager.shared
-        hkm.onBackgroundDelivery = { [weak self] in
-            Task { await self?.handleNewHealthData() }
-        }
-        hkm.setupObserverQueries()
-        hkm.setupPollingTimer()
 
         // Check every 30 minutes if an export is due
         exportTimer = Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { [weak self] _ in
@@ -96,13 +88,6 @@ class SchedulingManager: ObservableObject {
 
     // MARK: - Export Logic
 
-    /// Called when new health data is detected via observer queries
-    private func handleNewHealthData() async {
-        guard schedule.isEnabled else { return }
-        logger.info("New health data detected, checking if export is due")
-        await performExportIfDue()
-    }
-
     /// Checks if an export is due based on schedule and last export date
     private func performExportIfDue() async {
         guard schedule.isEnabled, !isExporting else { return }
@@ -134,7 +119,7 @@ class SchedulingManager: ObservableObject {
         await performCatchUpExport()
     }
 
-    /// Performs catch-up export for any missed days
+    /// Performs catch-up export for any missed days using HealthDataStore (local cache).
     private func performCatchUpExport() async {
         guard !isExporting else {
             logger.info("Export already in progress, skipping")
@@ -182,7 +167,8 @@ class SchedulingManager: ObservableObject {
 
         logger.info("Catch-up export: \(dates.count) day(s)")
 
-        let healthKitManager = HealthKitManager.shared
+        // Use HealthDataStore (local cache) instead of HealthKitManager
+        let healthDataStore = HealthDataStore()
         let vaultManager = VaultManager()
         let settings = AdvancedExportSettings()
 
@@ -198,14 +184,35 @@ class SchedulingManager: ObservableObject {
         vaultManager.refreshVaultAccess()
         vaultManager.startVaultAccess()
 
-        let result = await ExportOrchestrator.exportDatesBackground(
-            dates,
-            healthKitManager: healthKitManager,
-            vaultManager: vaultManager,
-            settings: settings
-        )
+        var successCount = 0
+        var failedDateDetails: [FailedDateDetail] = []
+
+        for date in dates {
+            guard let healthData = healthDataStore.fetchHealthData(for: date) else {
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                continue
+            }
+
+            if !healthData.hasAnyData {
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                continue
+            }
+
+            let success = vaultManager.exportHealthData(healthData, for: date, settings: settings)
+            if success {
+                successCount += 1
+            } else {
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
+            }
+        }
 
         vaultManager.stopVaultAccess()
+
+        let result = ExportOrchestrator.ExportResult(
+            successCount: successCount,
+            totalCount: dates.count,
+            failedDateDetails: failedDateDetails
+        )
 
         if result.successCount > 0 {
             var updatedSchedule = schedule
@@ -223,15 +230,15 @@ class SchedulingManager: ObservableObject {
                 title: "Export Complete",
                 body: result.isFullSuccess
                     ? "Exported \(result.successCount) day\(result.successCount == 1 ? "" : "s") of health data."
-                    : "Exported \(result.successCount)/\(result.totalCount) days."
+                    : "Exported \(result.successCount)/\(result.totalCount) days. Some dates have no synced data."
             )
 
             logger.info("Catch-up export done: \(result.successCount)/\(result.totalCount)")
         } else {
-            let reason = result.primaryFailureReason?.shortDescription ?? "Unknown error"
+            let reason = result.primaryFailureReason?.shortDescription ?? "No synced data available"
             await sendNotification(
                 title: "Export Failed",
-                body: reason
+                body: "\(reason). Sync from your iPhone first."
             )
             logger.error("Catch-up export failed: \(reason)")
         }

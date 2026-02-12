@@ -414,6 +414,81 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
+    // MARK: - Earliest Data Date
+
+    /// Finds the earliest date for which HealthKit has any data.
+    /// Queries the oldest sample across several common data types to determine
+    /// when the user's health data history begins.
+    func findEarliestHealthDataDate() async -> Date? {
+        // Query a few common types that most users will have
+        let typeIdentifiers: [HKQuantityTypeIdentifier] = [
+            .stepCount,
+            .activeEnergyBurned,
+            .heartRate,
+            .bodyMass
+        ]
+
+        var earliestDate: Date?
+
+        for identifier in typeIdentifiers {
+            guard let quantityType = HKQuantityType.quantityType(forIdentifier: identifier) else { continue }
+
+            let descriptor = HKSampleQueryDescriptor(
+                predicates: [.quantitySample(type: quantityType)],
+                sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
+                limit: 1
+            )
+
+            do {
+                if let sample = try await descriptor.result(for: healthStore).first {
+                    if earliestDate == nil || sample.startDate < earliestDate! {
+                        earliestDate = sample.startDate
+                    }
+                }
+            } catch {
+                logger.warning("Failed to query earliest date for \(identifier.rawValue): \(error.localizedDescription)")
+            }
+        }
+
+        // Also check sleep analysis
+        if let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) {
+            let descriptor = HKSampleQueryDescriptor(
+                predicates: [.categorySample(type: sleepType)],
+                sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
+                limit: 1
+            )
+
+            do {
+                if let sample = try await descriptor.result(for: healthStore).first {
+                    if earliestDate == nil || sample.startDate < earliestDate! {
+                        earliestDate = sample.startDate
+                    }
+                }
+            } catch {
+                logger.warning("Failed to query earliest sleep date: \(error.localizedDescription)")
+            }
+        }
+
+        // Also check workouts
+        let workoutDescriptor = HKSampleQueryDescriptor(
+            predicates: [.workout()],
+            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
+            limit: 1
+        )
+
+        do {
+            if let sample = try await workoutDescriptor.result(for: healthStore).first {
+                if earliestDate == nil || sample.startDate < earliestDate! {
+                    earliestDate = sample.startDate
+                }
+            }
+        } catch {
+            logger.warning("Failed to query earliest workout date: \(error.localizedDescription)")
+        }
+
+        return earliestDate
+    }
+
     // MARK: - Sleep Data
 
     /// Merges an array of (start, end) intervals, combining any that overlap or are adjacent.

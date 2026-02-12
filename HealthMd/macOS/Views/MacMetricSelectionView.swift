@@ -1,7 +1,7 @@
 #if os(macOS)
 import SwiftUI
 
-// MARK: - Metric Selection (macOS)
+// MARK: - Metric Selection (macOS) — Branded
 
 struct MacMetricSelectionView: View {
     @ObservedObject var selectionState: MetricSelectionState
@@ -13,21 +13,21 @@ struct MacMetricSelectionView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Health Metrics")
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: 4) {
+                    BrandLabel("Health Metrics")
                     Text("\(selectionState.totalEnabledCount) of \(selectionState.totalMetricCount) metrics enabled · \(enabledCategoryCount) of \(HealthMetricCategory.allCases.count) categories")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
                 }
                 Spacer()
                 ProgressView(value: Double(selectionState.totalEnabledCount), total: Double(selectionState.totalMetricCount))
                     .frame(width: 100)
-                    .tint(Color.accentColor)
+                    .tint(Color.accent)
             }
             .padding()
 
             Divider()
+                .opacity(0.3)
 
             // Category list
             List {
@@ -38,6 +38,7 @@ struct MacMetricSelectionView: View {
             .searchable(text: $searchText, prompt: "Search metrics…")
 
             Divider()
+                .opacity(0.3)
 
             // Footer with actions
             HStack {
@@ -55,6 +56,7 @@ struct MacMetricSelectionView: View {
 
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
+                    .tint(Color.accent)
             }
             .padding()
         }
@@ -101,18 +103,17 @@ struct MacMetricSelectionView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: category.icon)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.accent)
                     .frame(width: 20)
 
                 Text(category.rawValue)
-                    .fontWeight(.medium)
+                    .font(BrandTypography.bodyMedium())
 
                 Spacer()
 
                 Text("\(selectionState.enabledMetricCount(for: category))/\(selectionState.totalMetricCount(for: category))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                    .font(BrandTypography.value())
+                    .foregroundStyle(Color.textMuted)
 
                 categoryToggle(for: category)
             }
@@ -126,13 +127,13 @@ struct MacMetricSelectionView: View {
         } label: {
             if selectionState.isCategoryFullyEnabled(category) {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.success)
             } else if selectionState.isCategoryPartiallyEnabled(category) {
                 Image(systemName: "minus.circle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.warning)
             } else {
                 Image(systemName: "circle")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.textMuted)
             }
         }
         .buttonStyle(.plain)
@@ -146,14 +147,16 @@ struct MacMetricSelectionView: View {
         )) {
             HStack {
                 Text(metric.name)
+                    .font(BrandTypography.body())
                 if !metric.unit.isEmpty {
                     Text("(\(metric.unit))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
                 }
             }
         }
         .toggleStyle(.checkbox)
+        .tint(Color.accent)
         .padding(.leading, 8)
     }
 }

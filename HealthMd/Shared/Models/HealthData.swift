@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Sleep Data
 
-struct SleepData {
+struct SleepData: Codable {
     var totalDuration: TimeInterval = 0
     var deepSleep: TimeInterval = 0
     var remSleep: TimeInterval = 0
@@ -17,7 +17,7 @@ struct SleepData {
 
 // MARK: - Activity Data
 
-struct ActivityData {
+struct ActivityData: Codable {
     var steps: Int?
     var activeCalories: Double?
     var exerciseMinutes: Double?
@@ -41,7 +41,7 @@ struct ActivityData {
 
 // MARK: - Heart Data
 
-struct HeartData {
+struct HeartData: Codable {
     var restingHeartRate: Double?
     var walkingHeartRateAverage: Double?
     var averageHeartRate: Double?
@@ -58,7 +58,7 @@ struct HeartData {
 
 // MARK: - Vitals Data
 
-struct VitalsData {
+struct VitalsData: Codable {
     // Respiratory Rate (daily aggregates)
     var respiratoryRateAvg: Double?
     var respiratoryRateMin: Double?
@@ -104,7 +104,7 @@ struct VitalsData {
 
 // MARK: - Body Data
 
-struct BodyData {
+struct BodyData: Codable {
     var weight: Double? // in kg
     var bodyFatPercentage: Double?
     var height: Double? // in meters
@@ -120,7 +120,7 @@ struct BodyData {
 
 // MARK: - Nutrition Data
 
-struct NutritionData {
+struct NutritionData: Codable {
     var dietaryEnergy: Double? // kcal
     var protein: Double? // grams
     var carbohydrates: Double? // grams
@@ -142,7 +142,7 @@ struct NutritionData {
 
 // MARK: - Mindfulness Data
 
-struct MindfulnessData {
+struct MindfulnessData: Codable {
     var mindfulMinutes: Double?
     var mindfulSessions: Int?
     var stateOfMind: [StateOfMindEntry] = []
@@ -183,15 +183,24 @@ struct MindfulnessData {
 
 // MARK: - State of Mind Entry
 
-struct StateOfMindEntry: Identifiable {
-    let id = UUID()
+struct StateOfMindEntry: Identifiable, Codable {
+    let id: UUID
     let timestamp: Date
     let kind: StateOfMindKind
     let valence: Double  // -1.0 (very unpleasant) to 1.0 (very pleasant)
     let labels: [String]  // Emotion/mood labels like "Happy", "Anxious", etc.
     let associations: [String]  // Context like "Work", "Exercise", "Family", etc.
-    
-    enum StateOfMindKind: String {
+
+    init(id: UUID = UUID(), timestamp: Date, kind: StateOfMindKind, valence: Double, labels: [String], associations: [String]) {
+        self.id = id
+        self.timestamp = timestamp
+        self.kind = kind
+        self.valence = valence
+        self.labels = labels
+        self.associations = associations
+    }
+
+    enum StateOfMindKind: String, Codable {
         case momentaryEmotion = "Momentary Emotion"
         case dailyMood = "Daily Mood"
     }
@@ -240,7 +249,7 @@ struct StateOfMindEntry: Identifiable {
 
 // MARK: - Mobility Data
 
-struct MobilityData {
+struct MobilityData: Codable {
     var walkingSpeed: Double? // m/s
     var walkingStepLength: Double? // meters
     var walkingDoubleSupportPercentage: Double?
@@ -258,7 +267,7 @@ struct MobilityData {
 
 // MARK: - Hearing Data
 
-struct HearingData {
+struct HearingData: Codable {
     var headphoneAudioLevel: Double? // dB
     var environmentalSoundLevel: Double? // dB
 
@@ -367,13 +376,22 @@ enum WorkoutType: String, Codable, CaseIterable {
 
 // MARK: - Workout Data
 
-struct WorkoutData: Identifiable {
-    let id = UUID()
+struct WorkoutData: Identifiable, Codable {
+    let id: UUID
     let workoutType: WorkoutType
     let startTime: Date
     let duration: TimeInterval
     let calories: Double?
     let distance: Double? // in meters
+
+    init(id: UUID = UUID(), workoutType: WorkoutType, startTime: Date, duration: TimeInterval, calories: Double?, distance: Double?) {
+        self.id = id
+        self.workoutType = workoutType
+        self.startTime = startTime
+        self.duration = duration
+        self.calories = calories
+        self.distance = distance
+    }
 
     var workoutTypeName: String {
         workoutType.displayName
@@ -382,7 +400,7 @@ struct WorkoutData: Identifiable {
 
 // MARK: - Complete Health Data
 
-struct HealthData {
+struct HealthData: Codable {
     let date: Date
     var sleep: SleepData = SleepData()
     var activity: ActivityData = ActivityData()
